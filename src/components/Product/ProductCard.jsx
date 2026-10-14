@@ -219,24 +219,24 @@ export default function ProductCard({
           </AspectRatio>
         </div>
 
-        <div className="px-1 pb-2 pt-2">
+        <div className="px-1 pb-2 pt-2 flex items-start justify-between gap-1">
           <h3
-            className="truncate text-[11px] leading-snug text-[#2d2d2d] md:text-[12px] montserrat-500 tracking-[0.06em] uppercase"
+            className="truncate text-[11px] leading-snug text-[#2d2d2d] md:text-[12px] montserrat-500 tracking-[0.06em] uppercase min-w-0 flex-1"
             title={product.title}
           >
             {product.title}
           </h3>
 
           {showPrice && (
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-1 shrink-0">
               <p
-                className="text-[11px] leading-snug md:text-[12px] montserrat-500 tracking-[0.04em]"
+                className="text-[11px] leading-snug md:text-[12px] montserrat-500 tracking-[0.04em] whitespace-nowrap"
                 style={{ color: BRAND }}
               >
                 {formatPrice(product.price)}
               </p>
               {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
-                <p className="text-[10px] md:text-[11px] text-neutral-400 line-through montserrat-400">
+                <p className="text-[10px] md:text-[11px] text-neutral-400 line-through montserrat-400 whitespace-nowrap">
                   {formatPrice(product.compareAtPrice)}
                 </p>
               )}

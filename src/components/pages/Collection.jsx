@@ -1211,7 +1211,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           ) : (
             <div
               className={`mt-3 grid gap-1 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
-                } md:grid-cols-3`}
+                } sm:grid-cols-3 lg:grid-cols-4`}
             >
               {pagedProducts.map((product, index) => {
                 const addState = addBusy[product.id];
@@ -1238,9 +1238,9 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             {fetchingMore && (
               <div
                 className={`grid gap-1 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
-                  } md:grid-cols-3`}
+                  } sm:grid-cols-3 lg:grid-cols-4`}
               >
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex flex-col gap-2">
                     <AspectRatio ratio={3 / 4}>
                       <Skeleton className="h-full w-full" />
