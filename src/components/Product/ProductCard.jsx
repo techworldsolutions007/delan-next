@@ -145,15 +145,15 @@ export default function ProductCard({
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
               aria-pressed={wishlisted}
-              className={`absolute right-1 top-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/8 bg-white/70 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.05)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white/82 md:right-1.5 md:top-1.5 md:h-7 md:w-7 ${
+              className={`absolute bottom-2 right-2 z-30 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white md:bottom-2.5 md:right-2.5 md:h-8 md:w-8 ${
                 wishlisted
                   ? "md:opacity-100 md:pointer-events-auto"
                   : "md:pointer-events-none md:opacity-0 md:group-hover/card:pointer-events-auto md:group-hover/card:opacity-100 md:group-focus-within/card:pointer-events-auto md:group-focus-within/card:opacity-100"
               }`}
             >
               <Heart
-                size={12}
-                strokeWidth={1.9}
+                size={13}
+                strokeWidth={1.8}
                 style={wishlisted ? { color: BRAND, fill: BRAND } : { color: "#2d2d2d", fill: "none" }}
               />
             </button>
@@ -191,7 +191,7 @@ export default function ProductCard({
               )}
 
               {hasDesktopQuickAdd && (
-                <div className="absolute inset-x-0 bottom-0 hidden px-3 pb-3 md:block">
+                <div className="absolute inset-x-0 bottom-0 hidden px-3 pb-3 pr-12 md:block">
                   <div className="pointer-events-none translate-y-4 opacity-0 transition-all duration-300 ease-out group-hover/card:pointer-events-auto group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-within/card:pointer-events-auto group-focus-within/card:translate-y-0 group-focus-within/card:opacity-100">
                     <button
                       type="button"
