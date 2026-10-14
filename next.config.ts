@@ -6,12 +6,15 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['framer-motion', 'motion', 'lucide-react', '@radix-ui/react-icons', 'react-icons'],
   },
   images: {
+    // Shopify's CDN already applies transforms (maxWidth, format) server-side.
+    // Vercel Services routes /_next/image through the service rewrite layer,
+    // which bypasses Vercel's built-in optimizer. Disabling avoids broken images.
+    unoptimized: true,
     remotePatterns: [
-      { protocol: "https", hostname: "**.myshopify.com" },
-      { protocol: "https", hostname: "cdn.shopify.com" },
+      new URL('https://*.myshopify.com/**'),
+      new URL('https://cdn.shopify.com/**'),
+      new URL('https://cdn.shopifycloud.com/**'),
     ],
-    formats: ['image/avif', 'image/webp'],
-    deviceSizes: [390, 640, 828, 1080, 1200, 1920],
   },
   async headers() {
     return [

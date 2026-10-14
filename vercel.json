@@ -7,7 +7,6 @@
     },
     "delan-server": {
       "root": "delan-server",
-      "framework": "express",
       "entrypoint": "index.js"
     }
   },
