@@ -136,9 +136,9 @@ export default function ProductCard({
     <div className="group/card relative">
       <Link href={`/products/${product.handle}`}
         aria-label={product.title}
-        className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
       >
-        <div className="relative overflow-hidden rounded-lg">
+        <div className="relative overflow-hidden">
           {showWishlistButton && (
             <button
               type="button"
@@ -159,7 +159,7 @@ export default function ProductCard({
             </button>
           )}
 
-          <AspectRatio ratio={3 / 4} className="bg-[#f5f0ed]">
+          <AspectRatio ratio={3 / 4} className="bg-[#f0eeec]">
             <div className="relative h-full w-full">
               <img
                 src={shopifyImg(product.imageUrl, eager ? 800 : 350)}
@@ -219,24 +219,24 @@ export default function ProductCard({
           </AspectRatio>
         </div>
 
-        <div className="space-y-1 px-0.5 pb-1 pt-3">
+        <div className="px-1 pb-2 pt-2">
           <h3
-            className="truncate text-[12px] leading-snug text-[#2d2d2d] md:text-[13px] montserrat-500 tracking-[0.05em] sm:tracking-[0.15em] uppercase"
+            className="truncate text-[11px] leading-snug text-[#2d2d2d] md:text-[12px] montserrat-500 tracking-[0.06em] uppercase"
             title={product.title}
           >
             {product.title}
           </h3>
 
           {showPrice && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-0.5">
               <p
-                className="text-[12px] leading-snug md:text-[13px] montserrat-600 tracking-[0.05em] sm:tracking-[0.15em] uppercase"
+                className="text-[11px] leading-snug md:text-[12px] montserrat-500 tracking-[0.04em]"
                 style={{ color: BRAND }}
               >
                 {formatPrice(product.price)}
               </p>
               {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
-                <p className="text-[11px] md:text-[12px] text-neutral-400 line-through montserrat-500">
+                <p className="text-[10px] md:text-[11px] text-neutral-400 line-through montserrat-400">
                   {formatPrice(product.compareAtPrice)}
                 </p>
               )}
