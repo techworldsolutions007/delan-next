@@ -65,18 +65,9 @@ export default function Contact() {
       return;
     }
 
-    // API base:
-    // - env override if provided
-    // - localhost -> http://localhost:3001
-    // - www.delan.in -> https://www.delan.in
-    // - otherwise -> https://delan-new-w5vo.vercel.app
-    const API_BASE =
-      (process.env.NEXT_PUBLIC_API_BASE_URL) ||
-      (window.location.hostname === "localhost"
-        ? "http://localhost:3001"
-        : window.location.hostname === "www.delan.in"
-        ? "https://www.delan.in"
-        : "https://delan-one.vercel.app");
+    // In production (Vercel) the rewrite routes /api/resend-contact to delan-server.
+    // For local dev without `vercel dev`, set NEXT_PUBLIC_API_BASE_URL=http://localhost:3001.
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
     try {
       const resp = await fetch(`${API_BASE}/api/resend-contact`, {

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "nextjs"
+    },
+    "delan-server": {
+      "root": "delan-server",
+      "framework": "express",
+      "entrypoint": "index.js"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/resend-contact",
+      "destination": { "service": "delan-server" }
+    },
+    {
+      "source": "/google-shopping-feed.xml",
+      "destination": { "service": "delan-server" }
+    },
+    {
+      "source": "/(.*)",
+      "destination": { "service": "app" }
+    }
+  ]
+}
