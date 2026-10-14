@@ -1066,7 +1066,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
       )}
 
       {/* ===== Features (controls) ===== */}
-      <div className="mx-auto max-w-7xl px-2 md:px-4 pt-8 pb-2">
+      <div className="w-full px-3 md:px-6 pt-8 pb-2">
         <h1 className="cormorant-garamond-700 uppercase text-primary text-3xl md:text-4xl lg:text-4xl text-center sm:text-start">
           {title}
         </h1>
@@ -1182,7 +1182,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             className={`bg-white/95 backdrop-blur-md z-40 transition-transform duration-300 sm:static sticky ${showHeader ? "top-[76px] sm:top-[80px]" : "top-0"
               }`}
           >
-            <div className="mx-auto max-w-7xl px-2 md:px-4 pt-3">
+            <div className="w-full px-3 md:px-6 pt-3">
               {/* Mobile strip */}
               <SubcategoryStrip items={items} activeKey={activeKey} />
               {/* Desktop strip */}
@@ -1199,7 +1199,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         </React.Suspense>
       ) : (
         /* Standard product grid */
-        <div className="mx-auto max-w-7xl px-2 md:px-4">
+        <div className="w-full px-3 md:px-6">
           {products.length === 0 ? (
             <div className="py-20 text-center text-neutral-600">
               {isSearchMode
@@ -1210,7 +1210,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             </div>
           ) : (
             <div
-              className={`mt-3 grid gap-1 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+              className={`mt-3 grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
                 } sm:grid-cols-3 lg:grid-cols-4`}
             >
               {pagedProducts.map((product, index) => {
@@ -1237,7 +1237,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           <div ref={observerTarget} className="w-full pb-20">
             {fetchingMore && (
               <div
-                className={`grid gap-1 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+                className={`grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
                   } sm:grid-cols-3 lg:grid-cols-4`}
               >
                 {[1, 2, 3, 4].map((i) => (
