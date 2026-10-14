@@ -55,7 +55,9 @@ export default function RegisterPage() {
     <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-12">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl text-primary">Create Account</CardTitle>
+          <CardTitle asChild>
+            <h1 className="text-2xl text-primary">Create Your Delan Account</h1>
+          </CardTitle>
           <CardDescription>
             Enter your details to create a new account.
           </CardDescription>

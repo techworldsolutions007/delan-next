@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import LoginPage from '@/components/pages/LoginPage';
 
 export const metadata = {
-  title: 'Sign In',
+  title: 'Sign In to Your Account | Delan',
   description: 'Sign in to your Delan account to track orders, manage addresses, and access your order history.',
   robots: { index: false, follow: false },
 };

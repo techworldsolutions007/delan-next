@@ -277,10 +277,9 @@ const Affiliate = () => {
       <div className="max-w-5xl mx-auto px-4 py-10">
         {/* HERO */}
         <div className="rounded-2xl border border-border bg-white shadow-sm p-6 md:p-10">
-          <h1 className="text-3xl md:text-4xl font-semibold text-primary/90">
-            Affiliate Program
+          <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase">
+            Earn with Delan — Women&apos;s Fashion Affiliate Program India
           </h1>
-          <p className="text-sm text-gray-500 mt-2">DELAN</p>
 
           <p className={`${paragraphStyle} mt-6 mb-0`}>
             Join DELAN’s Affiliate Program and earn by sharing premium, modern

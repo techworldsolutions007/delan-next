@@ -94,7 +94,7 @@ export default function Contact() {
   return (
     <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-16 md:pt-24">
       <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-2 text-center">
-        Contact Us
+        Contact Delan — We&apos;re Here to Help
       </h1>
       <p className="text-sm text-gray-500 mb-8 text-center">We usually respond within 1–2 business days.</p>
 

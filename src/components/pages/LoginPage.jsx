@@ -47,7 +47,9 @@ export default function LoginPage() {
     <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-12">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl text-primary">Login</CardTitle>
+          <CardTitle asChild>
+            <h1 className="text-2xl text-primary">Sign In to Your Delan Account</h1>
+          </CardTitle>
           <CardDescription>Enter your email below to login to your account.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

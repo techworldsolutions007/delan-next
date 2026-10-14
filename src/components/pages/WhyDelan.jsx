@@ -35,7 +35,7 @@ const WhyDelan = () => {
       <section className="px-4 pt-16 md:pt-24 pb-4">
         <div className="w-full max-w-5xl mx-auto">
           <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase text-center">
-            Why DELAN
+            Why Choose Delan — Premium Women&apos;s Fashion India
           </h1>
 
           <p className="montserrat-500 text-gray-700 text-center mt-4 leading-relaxed max-w-3xl mx-auto text-justify">

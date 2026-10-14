@@ -10,7 +10,7 @@ const ReturnExchange = () => {
   return (
     <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-10 md:pt-14 pb-12">
       <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-4 md:mb-5 text-center">
-        Returns &amp; Exchanges
+        Returns &amp; Exchanges — 7-Day Hassle-Free Policy
       </h1>
 
       <div className="w-full max-w-4xl montserrat-400">

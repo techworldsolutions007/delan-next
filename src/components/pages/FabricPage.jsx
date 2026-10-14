@@ -137,7 +137,7 @@ const Fabrics = () => {
       <section className="px-4 pt-16 md:pt-24 pb-10">
         <div className="w-full max-w-5xl mx-auto">
           <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase text-center">
-            Fabrics
+            Delan Fabrics — Premium Materials &amp; Fabric Care Guide
           </h1>
 
           {/* ✅ Expanded first paragraph (as you asked) */}

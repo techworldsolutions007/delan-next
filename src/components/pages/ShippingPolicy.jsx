@@ -12,7 +12,7 @@ const ShippingPolicy = () => {
     <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-16 md:pt-24 pb-16">
       {/* Page Title */}
       <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-8 text-center">
-        Shipping & Delivery Policy
+        Shipping &amp; Delivery Policy — Pan India
       </h1>
 
       {/* Content Container */}
