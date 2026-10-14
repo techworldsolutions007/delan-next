@@ -136,30 +136,30 @@ export default function ProductCard({
     <div className="group/card relative">
       <Link href={`/products/${product.handle}`}
         aria-label={product.title}
-        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+        className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
       >
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-lg">
           {showWishlistButton && (
             <button
               type="button"
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
               aria-pressed={wishlisted}
-              className={`absolute bottom-2 right-2 z-30 inline-flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white md:bottom-2.5 md:right-2.5 md:h-8 md:w-8 ${
+              className={`absolute right-1 top-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/8 bg-white/70 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.05)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white/82 md:right-1.5 md:top-1.5 md:h-7 md:w-7 ${
                 wishlisted
                   ? "md:opacity-100 md:pointer-events-auto"
                   : "md:pointer-events-none md:opacity-0 md:group-hover/card:pointer-events-auto md:group-hover/card:opacity-100 md:group-focus-within/card:pointer-events-auto md:group-focus-within/card:opacity-100"
               }`}
             >
               <Heart
-                size={13}
-                strokeWidth={1.8}
+                size={12}
+                strokeWidth={1.9}
                 style={wishlisted ? { color: BRAND, fill: BRAND } : { color: "#2d2d2d", fill: "none" }}
               />
             </button>
           )}
 
-          <AspectRatio ratio={3 / 4} className="bg-[#f0eeec]">
+          <AspectRatio ratio={3 / 4} className="bg-[#f5f0ed]">
             <div className="relative h-full w-full">
               <img
                 src={shopifyImg(product.imageUrl, eager ? 800 : 350)}
@@ -191,7 +191,7 @@ export default function ProductCard({
               )}
 
               {hasDesktopQuickAdd && (
-                <div className="absolute inset-x-0 bottom-0 hidden px-3 pb-3 pr-12 md:block">
+                <div className="absolute inset-x-0 bottom-0 hidden px-3 pb-3 md:block">
                   <div className="pointer-events-none translate-y-4 opacity-0 transition-all duration-300 ease-out group-hover/card:pointer-events-auto group-hover/card:translate-y-0 group-hover/card:opacity-100 group-focus-within/card:pointer-events-auto group-focus-within/card:translate-y-0 group-focus-within/card:opacity-100">
                     <button
                       type="button"
@@ -219,24 +219,24 @@ export default function ProductCard({
           </AspectRatio>
         </div>
 
-        <div className="px-1 pb-2 pt-2 flex items-start justify-between gap-1">
+        <div className="space-y-1 px-0.5 pb-1 pt-3">
           <h3
-            className="truncate text-[11px] leading-snug text-[#2d2d2d] md:text-[12px] montserrat-500 tracking-[0.06em] uppercase min-w-0 flex-1"
+            className="truncate text-[12px] leading-snug text-[#2d2d2d] md:text-[13px] montserrat-500 tracking-[0.05em] sm:tracking-[0.15em] uppercase"
             title={product.title}
           >
             {product.title}
           </h3>
 
           {showPrice && (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-2">
               <p
-                className="text-[11px] leading-snug md:text-[12px] montserrat-500 tracking-[0.04em] whitespace-nowrap"
+                className="text-[12px] leading-snug md:text-[13px] montserrat-600 tracking-[0.05em] sm:tracking-[0.15em] uppercase"
                 style={{ color: BRAND }}
               >
                 {formatPrice(product.price)}
               </p>
               {product.compareAtPrice && Number(product.compareAtPrice) > Number(product.price) && (
-                <p className="text-[10px] md:text-[11px] text-neutral-400 line-through montserrat-400 whitespace-nowrap">
+                <p className="text-[11px] md:text-[12px] text-neutral-400 line-through montserrat-500">
                   {formatPrice(product.compareAtPrice)}
                 </p>
               )}

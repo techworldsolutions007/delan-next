@@ -1066,7 +1066,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
       )}
 
       {/* ===== Features (controls) ===== */}
-      <div className="w-full px-3 md:px-6 pt-8 pb-2">
+      <div className="mx-auto max-w-7xl px-4 md:px-8 pt-8 pb-2">
         <h1 className="cormorant-garamond-700 uppercase text-primary text-3xl md:text-4xl lg:text-4xl text-center sm:text-start">
           {title}
         </h1>
@@ -1182,7 +1182,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             className={`bg-white/95 backdrop-blur-md z-40 transition-transform duration-300 sm:static sticky ${showHeader ? "top-[76px] sm:top-[80px]" : "top-0"
               }`}
           >
-            <div className="w-full px-3 md:px-6 pt-3">
+            <div className="mx-auto max-w-7xl px-4 md:px-8 pt-3">
               {/* Mobile strip */}
               <SubcategoryStrip items={items} activeKey={activeKey} />
               {/* Desktop strip */}
@@ -1199,7 +1199,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         </React.Suspense>
       ) : (
         /* Standard product grid */
-        <div className="w-full px-3 md:px-6">
+        <div className="mx-auto max-w-7xl px-4 md:px-8">
           {products.length === 0 ? (
             <div className="py-20 text-center text-neutral-600">
               {isSearchMode
@@ -1210,8 +1210,8 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             </div>
           ) : (
             <div
-              className={`mt-3 grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
-                } sm:grid-cols-3 lg:grid-cols-4`}
+              className={`mt-4 grid gap-4 md:gap-6 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+                } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
             >
               {pagedProducts.map((product, index) => {
                 const addState = addBusy[product.id];
@@ -1222,7 +1222,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
                   <ProductCard
                     key={product.id}
                     product={product}
-                    eager={index < 6}
+                    eager={index < 4}
                     onAddToCart={handleAddToCart}
                     isAddBusy={isAddBusy}
                     justAdded={justAdded}
@@ -1237,17 +1237,18 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           <div ref={observerTarget} className="w-full pb-20">
             {fetchingMore && (
               <div
-                className={`grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
-                  } sm:grid-cols-3 lg:grid-cols-4`}
+                className={`grid gap-4 md:gap-6 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+                  } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
               >
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex flex-col gap-2">
+                  <div key={i} className="flex flex-col gap-3">
                     <AspectRatio ratio={3 / 4}>
-                      <Skeleton className="h-full w-full" />
+                      <Skeleton className="h-full w-full rounded-2xl" />
                     </AspectRatio>
-                    <div className="flex flex-col gap-1.5 px-1">
-                      <Skeleton className="h-3 w-3/4 rounded-sm" />
-                      <Skeleton className="h-3 w-1/4 rounded-sm" />
+                    <div className="flex flex-col items-center gap-2 px-4">
+                      <Skeleton className="h-5 w-3/4 rounded-md" />
+                      <Skeleton className="h-4 w-1/4 rounded-md" />
+                      <Skeleton className="h-10 w-full rounded-md mt-2" />
                     </div>
                   </div>
                 ))}
