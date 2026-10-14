@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Make sure favicon and key assets are crawlable
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /assets/
+Allow: /images/
+
+# Optional but recommended if you have a sitemap
+Sitemap: https://www.delan.in/sitemap.xml
