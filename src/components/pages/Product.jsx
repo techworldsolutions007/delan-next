@@ -44,7 +44,6 @@ const Product = ({ handle: handleProp, params } = {}) => {
 
   useEffect(() => {
     if (!handle) return;
-    setHasReviews(false);
     setPdpProduct(null);
     rememberRecentlyViewedHandle(handle);
   }, [handle]);

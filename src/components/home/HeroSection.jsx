@@ -98,14 +98,12 @@ export default function HeroSlider() {
         loop
         playsInline
         autoPlay
-        // 🧠 Key part:
-        // - iOS: preload="none" → video doesn't block initial CDN traffic
-        // - Others: preload="metadata" → small header only
         preload={isIOS ? "none" : "metadata"}
         poster={HERO_POSTER}
         controls={false}
         disablePictureInPicture
         aria-label="Delan hero video"
+        suppressHydrationWarning
       >
         {/* Desktop / Tablet source */}
         <source
