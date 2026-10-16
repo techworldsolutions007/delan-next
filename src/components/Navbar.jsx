@@ -452,7 +452,7 @@ export default function Navbar() {
                   aria-label="Account menu"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage alt={displayName} />
+                    <AvatarImage alt="" />
                     <AvatarFallback className="text-xs">
                       {avatarFallback}
                     </AvatarFallback>

@@ -125,13 +125,9 @@ export default function HeroSlider() {
 
       {/* CTA */}
       <div className="absolute inset-x-0 bottom-25 md:bottom-12 flex flex-col justify-center items-center z-10 gap-4 -translate-y-[20px] md:-translate-y-[5px]">
-        <h1 className="text-center px-6 pointer-events-none select-none">
-          <span className="block cormorant-garamond-700 text-white text-3xl sm:text-5xl md:text-6xl uppercase tracking-[0.06em] drop-shadow-xl leading-tight">
-            Premium Women&apos;s Fashion
-          </span>
-          <span className="block montserrat-500 text-white/75 text-[10px] sm:text-[11px] md:text-sm tracking-[0.3em] uppercase mt-2 drop-shadow-md">
-            Co-ord Sets &middot; Dresses &middot; Ethnic Wear &middot; India
-          </span>
+        <h1 className="sr-only">
+          <span>Premium Women&apos;s Fashion</span>
+          <span>Co-ord Sets · Dresses · Ethnic Wear · India</span>
         </h1>
         <Button
           asChild

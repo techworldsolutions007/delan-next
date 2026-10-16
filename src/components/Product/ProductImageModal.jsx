@@ -122,11 +122,6 @@ export default function ProductImageModal({
             )}
           </div>
           
-          {images[index]?.altText && !isZoomed && (
-            <div className="absolute bottom-10 left-0 right-0 px-6 text-center z-[110]">
-                <p className="text-white/80 text-xs sm:text-sm montserrat-500">{images[index].altText}</p>
-            </div>
-          )}
         </motion.div>
       )}
     </AnimatePresence>

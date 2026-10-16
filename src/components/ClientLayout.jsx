@@ -30,8 +30,8 @@ export default function ClientLayout({ children }) {
           >
             {children}
           </div>
-          <Testimonial />
-          <PrBanner />
+          {!isProductPage && <Testimonial />}
+          {!isProductPage && <PrBanner />}
           <DelanShiny />
           <Footer />
           <WhatsAppButton />

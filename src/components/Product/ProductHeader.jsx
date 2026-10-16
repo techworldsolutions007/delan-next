@@ -147,8 +147,8 @@ const WISHLIST_KEY = WISHLIST_STORAGE_KEY;
 const SITE_BRAND_NAME = "DELAN"; // used ONLY when Shopify seo.title is empty
 const ADD_TO_BAG_TRUST_BADGES = [
   { icon: Return, label: "7 Days Return / Exchanges" },
-  { icon: Cod, label: "COD Accepted" },
   { icon: Secure, label: "Secure Payments" },
+  { icon: Cod, label: "Partial COD Accepted" },
   { icon: Delivery, label: "Delivers Across India" },
 ];
 
