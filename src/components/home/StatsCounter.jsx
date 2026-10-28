@@ -136,7 +136,7 @@ export default function StatsCounter() {
       <div className="mx-auto max-w-[960px] px-4 text-center text-primary py-10">
         <SectionHeader
           title="25 Years of Making Women Feel Seen"
-          subtitle="Started in a single store, now dressing women across India — the same commitment to quality, fit, and silhouette that began it all."
+          subtitle="Started in a single store, now dressing women across India. The same commitment to quality, fit, and silhouette that began it all."
           showSubtitle
           subtitleClassName="tracking-[0.025em] leading-snug"
           className="max-w-[960px]"

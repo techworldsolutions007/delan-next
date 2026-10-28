@@ -4,13 +4,13 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://delan.in';
 const PAGE_URL = `${SITE_URL}/faq`;
 
 export const metadata = {
-  title: 'FAQs — Shipping, Returns, Payments & Sizing | Delan',
+  title: 'FAQs | Shipping, Returns, Payments & Sizing | Delan',
   description: 'Answers to your top questions about Delan: shipping timelines, 7-day return policy, COD, payment options, size guide & order tracking. Get help fast.',
   alternates: { canonical: PAGE_URL },
   robots: { index: true, follow: true },
   openGraph: {
-    title: 'FAQs — Shipping, Returns, Payments & Sizing | Delan',
-    description: 'Find answers to frequently asked questions about Delan — shipping, returns, payments, COD, sizing, and more.',
+    title: 'FAQs | Shipping, Returns, Payments & Sizing | Delan',
+    description: 'Find answers to frequently asked questions about Delan | shipping, returns, payments, COD, sizing, and more.',
     type: 'website',
     url: PAGE_URL,
     images: [{ url: '/og-default.jpg', width: 1200, height: 630, alt: 'Delan FAQs' }],
@@ -26,7 +26,7 @@ export const metadata = {
 const faqJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
-  name: 'Frequently Asked Questions — Delan',
+  name: 'Frequently Asked Questions | Delan',
   url: PAGE_URL,
   mainEntity: [
     {

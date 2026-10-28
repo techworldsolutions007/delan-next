@@ -4,7 +4,7 @@ import Image from "next/image";
 
 const AboutUs = () => {
   const headingStyle = "text-2xl font-semibold text-primary/90 mt-10 mb-4";
-  const paragraphStyle = "text-gray-700 mb-4 leading-relaxed text-justify";
+  const paragraphStyle = "text-gray-700 mb-4 leading-relaxed";
 
   const HERO_IMG =
     "https://cdn.shopify.com/s/files/1/0714/4420/1639/files/DSC00275_copy.jpg?v=1767802538";
@@ -24,10 +24,10 @@ const AboutUs = () => {
       <section className="px-4 pt-16 md:pt-24 pb-10">
         <div className="w-full max-w-5xl mx-auto">
           <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase text-center">
-            About Delan — Our Story
+            About Delan: Our Story
           </h1>
 
-          <p className="montserrat-500 text-gray-700 text-center mt-4 leading-relaxed max-w-3xl mx-auto text-justify">
+          <p className="montserrat-500 text-gray-700 text-center mt-4 leading-relaxed max-w-3xl mx-auto">
             DELAN is a modern luxury label designed for women who value refined silhouettes,
             premium finishing, and effortless confidence. We create pieces you can live in,
             repeat, and remember,{" "}
@@ -120,7 +120,7 @@ const AboutUs = () => {
                   again, because the most meaningful outfits are not the ones you save, they are the
                   ones you live in.
                 </p>
-                <p className="text-gray-700 leading-relaxed text-justify">
+                <p className="text-gray-700 leading-relaxed">
                   Welcome to <strong>DELAN</strong>. For the moments that matter.
                 </p>
               </div>

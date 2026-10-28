@@ -90,7 +90,7 @@
 //   const headingStyle = "text-2xl font-semibold text-primary/90 mt-10 mb-4";
 //   const paragraphStyle = "text-gray-700 mb-4 leading-relaxed text-justify";
 
-//   const APPLY_URL = "https://delan.in/affiliate-program";
+//   const APPLY_URL = "/contact";
 
 //   return (
 //     <div className="bg-white min-h-screen">
@@ -147,7 +147,7 @@
 //         <h2 className={headingStyle}>Why DELAN?</h2>
 //         <div className="rounded-2xl border border-border bg-white shadow-sm p-6">
 //           <p className={`${paragraphStyle} mb-0`}>
-//             DELAN is designed for elevated everyday dressing—clean silhouettes,
+//             DELAN is designed for elevated everyday dressing: clean silhouettes,
 //             premium feel, and effortless styling. If your audience loves modern,
 //             polished looks, DELAN fits naturally into their wardrobe.
 //           </p>
@@ -268,9 +268,9 @@ import React from "react";
 const Affiliate = () => {
   // ✅ Match About.jsx typography
   const headingStyle = "text-2xl font-semibold text-primary/90 mt-10 mb-4";
-  const paragraphStyle = "text-gray-700 mb-4 leading-relaxed text-justify";
+  const paragraphStyle = "text-gray-700 mb-4 leading-relaxed";
 
-  const APPLY_URL = "https://delan.in/affiliate-program";
+  const APPLY_URL = "/contact";
 
   return (
     <div className="bg-white min-h-screen">
@@ -278,7 +278,7 @@ const Affiliate = () => {
         {/* HERO */}
         <div className="rounded-2xl border border-border bg-white shadow-sm p-6 md:p-10">
           <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase">
-            Earn with Delan — Women&apos;s Fashion Affiliate Program India
+            Earn with Delan: Women&apos;s Fashion Affiliate Program India
           </h1>
 
           <p className={`${paragraphStyle} mt-6 mb-0`}>
@@ -306,7 +306,7 @@ const Affiliate = () => {
         <h2 className={headingStyle}>Why partner with DELAN?</h2>
         <div className="rounded-2xl border border-border bg-white shadow-sm p-6">
           <p className={`${paragraphStyle} mb-0`}>
-            DELAN is designed for elevated everyday dressing—clean silhouettes,
+            DELAN is designed for elevated everyday dressing: clean silhouettes,
             premium feel, and effortless styling. When you recommend DELAN,
             you’re sharing a brand that blends comfort with a polished look,
             making it an easy fit for a modern wardrobe.

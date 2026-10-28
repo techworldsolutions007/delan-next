@@ -392,7 +392,7 @@ export default function TrackOrder() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 pt-16 md:pt-24">
+    <div className="min-h-screen bg-white px-4 pt-16 md:pt-24 pb-16">
       <div className="mx-auto w-full max-w-4xl">
         <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-8 text-center">
           Track your shipment

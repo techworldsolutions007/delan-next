@@ -27,7 +27,7 @@ const jsonLdBlocks = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'Track Your Delan Order — Live Shipping Status',
+    name: 'Track Your Delan Order | Live Shipping Status',
     description: 'Real-time order tracking for Delan women\'s fashion deliveries across India.',
     url: PAGE_URL,
     publisher: {

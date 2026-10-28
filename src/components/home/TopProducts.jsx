@@ -206,14 +206,14 @@ export default function TopProducts({
 
     if (loading) {
       return (
-        <section className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
-          <div className="mx-auto max-w-7xl">
+        <section className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+          <div className="mx-auto max-w-[1440px]">
             <SectionHeader title={title} subtitle={subtitle} className="mb-6 md:mb-8" />
-            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-6">
+            <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i}>
-                  <AspectRatio ratio={3 / 4} className="rounded-lg bg-neutral-100">
-                    <Skeleton className="h-full w-full rounded-lg" />
+                  <AspectRatio ratio={3 / 4} className="bg-neutral-100">
+                    <Skeleton className="h-full w-full" />
                   </AspectRatio>
                   <div className="pt-3 space-y-2">
                     <Skeleton className="h-4 w-2/3 mx-auto" />
@@ -228,8 +228,8 @@ export default function TopProducts({
 
     if (error) {
       return (
-        <section className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
-          <div className="mx-auto max-w-7xl">
+        <section className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+          <div className="mx-auto max-w-[1440px]">
             <SectionHeader title={title} subtitle={subtitle} className="mb-6 md:mb-8" />
             <p className="montserrat-500 text-primary/70 text-center">Error: {error}</p>
           </div>
@@ -240,17 +240,17 @@ export default function TopProducts({
     if (collections.length === 0) return null;
 
     return (
-      <section className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
-        <div className="mx-auto max-w-7xl">
+      <section className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+        <div className="mx-auto max-w-[1440px]">
           <SectionHeader title={title} subtitle={subtitle} className="mb-6 md:mb-8" />
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-6">
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
             {collections.map((c) => (
               <div key={c.id} className="group/card">
                 <Link href={`/collections/${c.handle}`}
                   aria-label={c.title}
-                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-lg"
+                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
                 >
-                  <div className="relative overflow-hidden rounded-lg">
+                  <div className="relative overflow-hidden">
                     <AspectRatio ratio={3 / 4} className="bg-[#f5f0ed]">
                       {c.imgUrl ? (
                         <img
@@ -281,9 +281,9 @@ export default function TopProducts({
             ))}
           </div>
           {showHeaderLink && (
-            <div className="mt-5 flex justify-center md:mt-6">
+            <div className="mt-6 flex justify-center md:mt-8">
               <Link href="/collections/all"
-                className="inline-flex items-center justify-center rounded-lg border border-primary px-6 py-3 text-[11px] md:text-[12px] montserrat-600 uppercase tracking-[0.3em] text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
+                className="inline-flex items-center justify-center rounded-lg border border-primary px-8 py-3 text-[11px] md:text-[12px] montserrat-600 uppercase tracking-[0.16em] text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
               >
                 View All
               </Link>
@@ -406,14 +406,14 @@ export default function TopProducts({
   // Loading / Error
   if (loading) {
     return (
-      <section className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
-        <div className="mx-auto max-w-7xl">
+      <section className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+        <div className="mx-auto max-w-[1440px]">
           <SectionHeader title={title} subtitle={subtitle} className="mb-6 md:mb-8" />
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-6">
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i}>
-                <AspectRatio ratio={3 / 4} className="rounded-lg bg-neutral-100">
-                  <Skeleton className="h-full w-full rounded-lg" />
+                <AspectRatio ratio={3 / 4} className="bg-neutral-100">
+                  <Skeleton className="h-full w-full" />
                 </AspectRatio>
                 <div className="pt-3 space-y-2">
                   <Skeleton className="h-4 w-2/3" />
@@ -429,8 +429,8 @@ export default function TopProducts({
 
   if (error) {
     return (
-      <section className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
-        <div className="mx-auto max-w-7xl">
+      <section className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+        <div className="mx-auto max-w-[1440px]">
           <SectionHeader title={title} subtitle={subtitle} className="mb-6 md:mb-8" />
           <p className="montserrat-500 text-primary/70 text-center">Error loading products: {error}</p>
         </div>
@@ -443,11 +443,11 @@ export default function TopProducts({
   const linkTo = mode === "collections" ? "/collections" : `/collections/${handle}`;
 
   return (
-    <section className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
-      <div className="mx-auto max-w-7xl">
+    <section className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+      <div className="mx-auto max-w-[1440px]">
         <SectionHeader title={title} subtitle={subtitle} className="mb-6 md:mb-8" />
 
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-6">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 md:gap-4">
           {products.map((product, idx) => {
             const addState = adding[product.id];
             return (
@@ -459,15 +459,16 @@ export default function TopProducts({
                   isAddBusy={addState === true}
                   justAdded={addState === "added"}
                   showWishlistButton
+
                 />
               </div>
             );
           })}
         </div>
         {showHeaderLink && linkTo && (
-          <div className="mt-5 flex justify-center md:mt-6">
+          <div className="mt-6 flex justify-center md:mt-8">
             <Link href={linkTo}
-              className="inline-flex items-center justify-center rounded-lg border border-primary px-6 py-3 text-[11px] md:text-[12px] montserrat-600 uppercase tracking-[0.16em] text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
+              className="inline-flex items-center justify-center rounded-lg border border-primary px-8 py-3 text-[11px] md:text-[12px] montserrat-600 uppercase tracking-[0.16em] text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
             >
               View All
             </Link>

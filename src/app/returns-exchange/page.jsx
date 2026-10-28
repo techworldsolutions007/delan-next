@@ -4,13 +4,13 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://delan.in';
 const PAGE_URL = `${SITE_URL}/returns-exchange`;
 
 export const metadata = {
-  title: 'Returns & Exchange Policy | Delan — 7-Day Hassle-Free Returns',
+  title: 'Returns & Exchange Policy | Delan | 7-Day Hassle-Free Returns',
   description: 'Delan\'s 7-day return and exchange policy. Easy size swaps, hassle-free refunds. Learn how to initiate a return or exchange for your women\'s fashion order.',
   alternates: { canonical: PAGE_URL },
   robots: { index: true, follow: true },
   openGraph: {
-    title: 'Returns & Exchange Policy | Delan — 7-Day Hassle-Free Returns',
-    description: 'Delan\'s hassle-free 7-day returns & exchange policy — easy refunds and smooth size exchanges for all women\'s fashion orders.',
+    title: 'Returns & Exchange Policy | Delan | 7-Day Hassle-Free Returns',
+    description: 'Delan\'s hassle-free 7-day returns & exchange policy | easy refunds and smooth size exchanges for all women\'s fashion orders.',
     type: 'website',
     url: PAGE_URL,
     images: [{ url: '/og-default.jpg', width: 1200, height: 630, alt: 'Delan Returns & Exchange Policy' }],
@@ -27,7 +27,7 @@ const jsonLdBlocks = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'Returns & Exchange Policy — Delan',
+    name: 'Returns & Exchange Policy | Delan',
     description: '7-day hassle-free return and exchange policy for all Delan women\'s fashion orders.',
     url: PAGE_URL,
     publisher: {

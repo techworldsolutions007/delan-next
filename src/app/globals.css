@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 :root {
+  --pdp-sticky-top: 156px;
   --background: #ffffff;
   --foreground: #000000;
   --card: #ffffff;
@@ -207,6 +208,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Ensure all form controls inherit the site font */
+  input, button, select, textarea {
+    font: inherit;
+  }
+  /* Prevent browser-default link colors overriding component styles */
+  a, a:visited {
+    color: inherit;
+  }
 }
 
 @property --shine-pos {
@@ -257,6 +266,16 @@
 
 html {
   scrollbar-gutter: stable;
+  overflow-x: clip;
+}
+
+/* Author-level reset outside any layer — overrides browser UA visited colour */
+a:visited {
+  color: inherit;
+}
+
+body {
+  overflow-x: clip;
 }
 
 ::-webkit-scrollbar {
@@ -387,13 +406,29 @@ html {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
   }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  @keyframes overlay-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  @keyframes logo-heartbeat {
+    0%, 100% { transform: scale(1); }
+    14%       { transform: scale(1.18); }
+    28%       { transform: scale(1); }
+    42%       { transform: scale(1.12); }
+    56%       { transform: scale(1); }
   }
+  @keyframes dot-pulse {
+    0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+    40%           { opacity: 1;    transform: scale(1); }
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 .shopify-article-content {
@@ -516,5 +551,31 @@ html {
 
   .shopify-article-content iframe {
     min-height: 220px;
+  }
+}
+
+.badge-ready-to-ship {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 10;
+  background-color: #22c55e;
+  color: #ffffff;
+  font-size: 7px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+  .badge-ready-to-ship {
+    font-size: 8px;
+    padding: 3px 6px;
   }
 }

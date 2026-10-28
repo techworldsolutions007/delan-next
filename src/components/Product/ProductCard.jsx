@@ -136,24 +136,24 @@ export default function ProductCard({
     <div className="group/card relative">
       <Link href={`/products/${product.handle}`}
         aria-label={product.title}
-        className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
       >
-        <div className="relative overflow-hidden rounded-lg">
+        <div className="relative overflow-hidden">
           {showWishlistButton && (
             <button
               type="button"
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
               aria-pressed={wishlisted}
-              className={`absolute right-1 top-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/8 bg-white/70 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.05)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white/82 md:right-1.5 md:top-1.5 md:h-7 md:w-7 ${
+              className={`absolute right-1.5 top-1.5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/8 bg-white/80 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.05)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white/90 md:right-2 md:top-2 md:h-8 md:w-8 ${
                 wishlisted
                   ? "md:opacity-100 md:pointer-events-auto"
                   : "md:pointer-events-none md:opacity-0 md:group-hover/card:pointer-events-auto md:group-hover/card:opacity-100 md:group-focus-within/card:pointer-events-auto md:group-focus-within/card:opacity-100"
               }`}
             >
               <Heart
-                size={12}
-                strokeWidth={1.9}
+                size={15}
+                strokeWidth={1.8}
                 style={wishlisted ? { color: BRAND, fill: BRAND } : { color: "#2d2d2d", fill: "none" }}
               />
             </button>
@@ -161,6 +161,9 @@ export default function ProductCard({
 
           <AspectRatio ratio={3 / 4} className="bg-[#f5f0ed]">
             <div className="relative h-full w-full">
+              {product.isReadyToShip && (
+                <span className="badge-ready-to-ship">Ready to Ship</span>
+              )}
               <img
                 src={shopifyImg(product.imageUrl, eager ? 800 : 350)}
                 alt={product.altText}
@@ -242,6 +245,7 @@ export default function ProductCard({
               )}
             </div>
           )}
+
 
           {hasBottomAddToCart && (
             <button

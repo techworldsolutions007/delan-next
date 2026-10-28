@@ -4,7 +4,7 @@ import Image from "next/image";
 
 const WhyDelan = () => {
   const headingStyle = "text-2xl font-semibold text-primary/90 mt-10 mb-4";
-  const paragraphStyle = "text-gray-700 mb-4 leading-relaxed text-justify";
+  const paragraphStyle = "text-gray-700 mb-4 leading-relaxed";
 
   const HERO_IMG =
     // "https://cdn.shopify.com/s/files/1/0714/4420/1639/files/1_3e619d1a-2e65-4b31-9ded-a944917f6575.jpg?v=1767809801";
@@ -35,10 +35,10 @@ const WhyDelan = () => {
       <section className="px-4 pt-16 md:pt-24 pb-4">
         <div className="w-full max-w-5xl mx-auto">
           <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase text-center">
-            Why Choose Delan — Premium Women&apos;s Fashion India
+            Why Choose Delan: Premium Women&apos;s Fashion India
           </h1>
 
-          <p className="montserrat-500 text-gray-700 text-center mt-4 leading-relaxed max-w-3xl mx-auto text-justify">
+          <p className="montserrat-500 text-gray-700 text-center mt-4 leading-relaxed max-w-3xl mx-auto">
             DELAN is premium women’s western wear created for everyday elegance.
             We focus on refined silhouettes, a breathable wearing experience,
             and quality finishing so your outfits feel comfortable, look
@@ -149,7 +149,7 @@ const WhyDelan = () => {
                   this way, getting dressed becomes simple, and confidence
                   becomes effortless.
                 </p>
-                <p className="text-gray-700 leading-relaxed text-justify">
+                <p className="text-gray-700 leading-relaxed">
                   If you are searching for premium women’s western wear that
                   blends comfort, breathable feel, and lasting finish, DELAN is
                   made for you.

@@ -29,7 +29,7 @@ const ALL_COLLECTION_HANDLES_QUERY = /* GraphQL */ `
 
 const getCollection = cache(async (handle) => {
   try {
-    const data = await shopify(COLLECTION_META_QUERY, { handle });
+    const data = await shopify(COLLECTION_META_QUERY, { handle }, { tags: ['collections', `collection-${handle}`] });
     return data?.collection ?? null;
   } catch {
     return null;
@@ -37,6 +37,7 @@ const getCollection = cache(async (handle) => {
 });
 
 export const dynamicParams = true;
+export const revalidate = 3600; // ISR fallback: refresh at most every 1 hour if webhook misses
 
 export async function generateStaticParams() {
   const params = [];
@@ -106,7 +107,7 @@ export default async function Page({ params }) {
       after: null,
       sortKey: 'CREATED',
       reverse: true,
-    });
+    }, { tags: ['collections', `collection-${handle}`] });
   } catch {
     // CollectionPage falls back to its own client-side fetch
   }

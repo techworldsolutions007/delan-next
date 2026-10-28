@@ -15,7 +15,6 @@ import CouponCarousel, { DEFAULT_COUPONS } from "./CouponCarousel";
 import ProductImageModal from "./ProductImageModal";
 import WhyLoveDescriptionCard from "./WhyLoveDescriptionCard";
 import WhyLoveAndDetails from "./WhyLoveAndDetails";
-import RelatedStyles from "./RelatedStyles";
 import { releaseFocusForCheckout } from "@/lib/checkout-helpers";
 const Cod = "/icons/cod.png";
 const Return = "/icons/exchange.png";
@@ -53,14 +52,14 @@ const GET_PRODUCT_BY_HANDLE = `
         optionValues { name swatch { color } }
       }
       featuredImage {
-        url(transform: {maxWidth: 800})
+        url(transform: {maxWidth: 1600})
         thumbUrl: url(transform: {maxWidth: 220})
         altText
       }
       images(first: 20) {
         edges {
           node {
-            url(transform: {maxWidth: 800})
+            url(transform: {maxWidth: 1600})
             thumbUrl: url(transform: {maxWidth: 220})
             altText
           }
@@ -98,7 +97,7 @@ const GET_PRODUCT_BY_HANDLE = `
             sku
             quantityAvailable
             image {
-              url(transform: {maxWidth: 800})
+              url(transform: {maxWidth: 1600})
               thumbUrl: url(transform: {maxWidth: 220})
               altText
             }
@@ -397,7 +396,6 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
     return null;
   }, [normalizedFit]);
 
-  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const isExpressShipping = useMemo(() => {
     if (!product) return false;
@@ -549,39 +547,6 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
         const val = data?.product?.fitType?.value;
         if (!cancelled && val) setFitType(val);
       } catch { /* silent fallback */ }
-    })();
-    return () => { cancelled = true; };
-  }, [handle]);
-
-  // Dedicated fetch for related styles (list.product_reference metafield)
-  useEffect(() => {
-    if (!handle) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const RELATED_STYLES_QUERY = `
-          query getRelatedStyles($handle: String!) {
-            product(handle: $handle) {
-              metafield(namespace: "custom", key: "related_styles") {
-                references(first: 5) {
-                  nodes {
-                    ... on Product {
-                      id
-                      title
-                      handle
-                      featuredImage { url altText }
-                      priceRange { minVariantPrice { amount currencyCode } }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        `;
-        const data = await shopify(RELATED_STYLES_QUERY, { handle });
-        const nodes = data?.product?.metafield?.references?.nodes ?? [];
-        if (!cancelled) setRelatedProducts(nodes);
-      } catch { /* silent — feature is non-critical */ }
     })();
     return () => { cancelled = true; };
   }, [handle]);
@@ -1227,9 +1192,12 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
 
 
 
-        <div className="grid grid-cols-1 gap-10 lg:gap-14 lg:grid-cols-[1.1fr_0.9fr] md:items-start">
+        <div className="grid grid-cols-1 gap-10 lg:gap-14 lg:grid-cols-[1.1fr_0.9fr]">
           {/* LEFT: Image gallery */}
-          <div className="md:pl-2 min-w-0 overflow-hidden lg:sticky lg:top-8 lg:self-start flex flex-col-reverse md:flex-row gap-4">
+          <div
+            className="md:pl-2 min-w-0 overflow-hidden lg:sticky lg:self-start flex flex-col-reverse md:flex-row gap-4"
+            style={!isSmallViewport ? { top: 'var(--pdp-sticky-top, 156px)', transition: 'top 0.3s ease' } : undefined}
+          >
             {/* Thumbnails Track */}
             {galleryImages.length > 0 && (
               <div
@@ -1422,7 +1390,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
           </div>
 
           {/* RIGHT: Info & actions */}
-          <div className="md:pr-2 min-w-0 self-start">
+          <div className="md:pr-2 min-w-0">
             <section className="space-y-5 sm:space-y-6 min-w-0">
               <div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl leading-snug  tracking-[.025em] uppercase text-primary cormorant-garamond-700 ">
@@ -1742,7 +1710,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                 </p>
               )}
 
-              {!isExpressShipping && shippingMessage && (
+              {shippingMessage && (
                 <p className="mt-1 text-center text-[13px] font-semibold uppercase tracking-[0.12em] montserrat-600" style={{ color: BRAND }}>
                   {shippingMessage}
                 </p>
@@ -1766,14 +1734,12 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                       className="mb-2 h-10 w-10 object-contain brightness-0 sm:h-11 sm:w-11"
                       draggable="false"
                     />
-                    <span className="max-w-none whitespace-nowrap text-[8px] font-medium leading-tight text-black sm:text-[10px]">
+                    <span className="max-w-none whitespace-nowrap text-[9px] font-medium leading-tight text-black sm:text-[11px]">
                       {badge.label}
                     </span>
                   </li>
                 ))}
               </ul>
-
-              <RelatedStyles products={relatedProducts} />
 
               <CouponCarousel coupons={DEFAULT_COUPONS} />
 
@@ -1781,7 +1747,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                 html={product?.descriptionHtml}
                 text={product?.description}
                 alwaysExpanded
-                cardClassName="border-0 shadow-none"
+                cardClassName="border-border/70 shadow-none"
                 titleClassName="text-left"
               />
 

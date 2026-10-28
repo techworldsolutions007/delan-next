@@ -18,7 +18,7 @@ const FAQ = () => {
         Frequently Asked Questions
       </h1>
       <p className="montserrat-500 text-gray-500 text-center mb-8 max-w-xl text-sm md:text-base">
-        Shipping, returns, payments, COD &amp; more — answered.
+        Shipping, returns, payments, COD &amp; more. Answered.
       </p>
 
       {/* Content Container */}

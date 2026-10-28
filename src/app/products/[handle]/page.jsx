@@ -52,7 +52,7 @@ const ALL_PRODUCT_HANDLES_QUERY = /* GraphQL */ `
 
 const getProduct = cache(async (handle) => {
   try {
-    const data = await shopify(PRODUCT_META_QUERY, { handle });
+    const data = await shopify(PRODUCT_META_QUERY, { handle }, { tags: ['products', `product-${handle}`] });
     return data?.product ?? null;
   } catch {
     return null;
@@ -60,6 +60,7 @@ const getProduct = cache(async (handle) => {
 });
 
 export const dynamicParams = true;
+export const revalidate = 3600; // ISR fallback: refresh at most every 1 hour if webhook misses
 
 export async function generateStaticParams() {
   const params = [];

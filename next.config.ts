@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@shopify/hydrogen-react'],
   experimental: {
     optimizePackageImports: ['framer-motion', 'motion', 'lucide-react', '@radix-ui/react-icons', 'react-icons'],
+    staleTimes: {
+      dynamic: 300,  // cache visited dynamic pages (products, collections) for 5 min
+      static: 3600,  // cache static pages for 1 hour
+    },
   },
   images: {
     // Shopify's CDN already applies transforms (maxWidth, format) server-side.

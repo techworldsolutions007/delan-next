@@ -431,7 +431,7 @@ export default function LookPage({ handle: handleProp, initialLook = null }) {
                 {adding && <Loader2 className="w-4 h-4 animate-spin" />}
                 {added
                   ? 'Added to Bag ✓'
-                  : `Add Set to Bag — ${totalStr}`}
+                  : `Add Set to Bag (${totalStr})`}
               </button>
 
               {!allHaveSize && !canAddSet && (

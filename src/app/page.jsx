@@ -2,16 +2,18 @@ import Home from '@/components/pages/Home';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://delan.in';
 
+export const revalidate = 3600;
+
 export const metadata = {
-  title: 'Women\'s Fashion India — Co-ord Sets, Dresses & Ethnic Wear',
+  title: 'Women\'s Fashion India | Co-ord Sets, Dresses & Ethnic Wear',
   description: 'Shop Delan\'s premium women\'s fashion online. Discover co-ord sets, floral dresses, ethnic wear & contemporary styles. COD available. Fast shipping across India.',
   alternates: { canonical: SITE_URL },
   openGraph: {
-    title: 'Delan | Women\'s Fashion India — Co-ord Sets, Dresses & Ethnic Wear',
+    title: 'Delan | Women\'s Fashion India | Co-ord Sets, Dresses & Ethnic Wear',
     description: 'Discover India\'s premium women\'s fashion. Co-ord sets, floral dresses, ethnic wear & contemporary styles. COD · Fast shipping · 7-day returns.',
     type: 'website',
     url: SITE_URL,
-    images: [{ url: '/og-default.jpg', width: 1200, height: 630, alt: 'Delan — Premium Women\'s Fashion India' }],
+    images: [{ url: '/og-default.jpg', width: 1200, height: 630, alt: 'Delan | Premium Women\'s Fashion India' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -24,7 +26,7 @@ export const metadata = {
 const homeJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
-  name: 'Delan — Premium Women\'s Fashion India',
+  name: 'Delan | Premium Women\'s Fashion India',
   description: 'Shop co-ord sets, floral dresses, ethnic wear & contemporary women\'s fashion online in India.',
   url: SITE_URL,
   breadcrumb: {

@@ -27,7 +27,7 @@ const jsonLdBlocks = [
   {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'Delan Affiliate Program — Earn Commissions on Women\'s Fashion',
+    name: 'Delan Affiliate Program | Earn Commissions on Women\'s Fashion',
     description: 'Join Delan\'s affiliate program and earn commissions by promoting premium women\'s fashion to your audience.',
     url: PAGE_URL,
     publisher: {

@@ -12,7 +12,7 @@ const ShippingPolicy = () => {
     <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-16 md:pt-24 pb-16">
       {/* Page Title */}
       <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-8 text-center">
-        Shipping &amp; Delivery Policy — Pan India
+        Shipping &amp; Delivery Policy: Pan India
       </h1>
 
       {/* Content Container */}
@@ -55,6 +55,10 @@ const ShippingPolicy = () => {
               Order Confirmation: You will receive a shipment confirmation email
               with your tracking ID and a link to track your package as soon as
               your order is dispatched.
+            </li>
+            <li>
+              Handling Fee: A Rs. 49 handling fee is charged on all orders and
+              is added to your order total at checkout.
             </li>
           </ul>
 
@@ -178,6 +182,61 @@ const ShippingPolicy = () => {
             <li>
               Please keep all original packaging until the issue is resolved, as
               the carrier may need to inspect it.
+            </li>
+          </ul>
+
+          <h2 className={headingStyle}>Cash on Delivery (COD)</h2>
+
+          <ul className={listStyle}>
+            <li>
+              Full COD is available on orders up to Rs. 4,599. For orders above
+              Rs. 4,599, only Partial COD is available.
+            </li>
+            <li>
+              A Rs. 200 handling fee is charged on all COD and Partial COD
+              orders. This fee is added to your order total at checkout and is
+              non-refundable.
+            </li>
+            <li>
+              Partial COD: On orders above Rs. 4,599, 10% of the order value
+              will be charged upfront and is non-refundable. The remaining
+              balance is collected at the time of delivery.
+            </li>
+            <li>
+              Delan reserves the right to restrict or withdraw COD availability
+              based on pin code serviceability, order history, or other
+              internal criteria.
+            </li>
+          </ul>
+
+          <h2 className={headingStyle}>
+            Failed Delivery &amp; Return to Origin (RTO)
+          </h2>
+
+          <ul className={listStyle}>
+            <li>
+              If a delivery cannot be completed due to an incorrect address,
+              customer unavailability, or refusal to accept the package, the
+              shipment is returned to our warehouse. This is called a Return to
+              Origin (RTO).
+            </li>
+            <li>
+              An RTO charge of Rs. 300 will be applicable to cover the two-way
+              shipping cost. For prepaid orders, this amount will be deducted
+              from the refund. For COD orders, it will need to be settled
+              separately.
+            </li>
+            <li>
+              To avoid RTO charges, please double-check your delivery address
+              and phone number before confirming your order, and ensure someone
+              is available to receive the package during delivery.
+            </li>
+            <li>
+              If you would like to reattempt delivery, please contact us at{" "}
+              <a href="mailto:support@delanonline.com" className={linkStyle}>
+                support@delanonline.com
+              </a>{" "}
+              before the package is returned.
             </li>
           </ul>
 

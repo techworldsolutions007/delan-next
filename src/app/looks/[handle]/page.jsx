@@ -3,13 +3,13 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import LookPage from '@/components/pages/LookPage';
 import { shopify } from '@/lib/shopify';
-import { GET_LOOK_BY_HANDLE, normalizeLook_, cdnImage } from '@/lib/looks';
+import { GET_LOOK_BY_HANDLE, GET_LOOKS_LITE, normalizeLook_, cdnImage } from '@/lib/looks';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://delan.in';
 
 const getLook = cache(async (handle) => {
   try {
-    const data = await shopify(GET_LOOK_BY_HANDLE, { handle });
+    const data = await shopify(GET_LOOK_BY_HANDLE, { handle }, { tags: ['looks', `look-${handle}`] });
     return normalizeLook_(data?.metaobject) ?? null;
   } catch {
     return null;
@@ -17,14 +17,24 @@ const getLook = cache(async (handle) => {
 });
 
 export const dynamicParams = true;
+export const revalidate = 3600; // ISR fallback: refresh at most every 1 hour if webhook misses
+
+export async function generateStaticParams() {
+  try {
+    const data = await shopify(GET_LOOKS_LITE);
+    return (data?.metaobjects?.edges ?? []).map((e) => ({ handle: e.node.handle }));
+  } catch {
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }) {
   const { handle } = await params;
   const look = await getLook(handle);
   if (!look) return {};
 
-  const title = `${look.title} — Shop the Look | DELAN`;
-  const description = `Shop the complete look from DELAN — ${look.products
+  const title = `${look.title} | Shop the Look | DELAN`;
+  const description = `Shop the complete look from DELAN | ${look.products
     .slice(0, 3)
     .map((p) => p.title)
     .join(', ')}`;

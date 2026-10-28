@@ -92,9 +92,9 @@ export default function Contact() {
   const isSending = status === "sending";
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-16 md:pt-24">
+    <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-16 md:pt-24 pb-16">
       <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-2 text-center">
-        Contact Delan — We&apos;re Here to Help
+        Contact Delan: We&apos;re Here to Help
       </h1>
       <p className="text-sm text-gray-500 mb-8 text-center">We usually respond within 1–2 business days.</p>
 
@@ -185,7 +185,7 @@ export default function Contact() {
             type="submit"
             disabled={isSending}
             aria-disabled={isSending}
-            className="w-full h-12 bg-[#5a1f36] hover:bg-[#7a274b] disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full h-12 bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSending ? (
               <span className="inline-flex items-center gap-2">

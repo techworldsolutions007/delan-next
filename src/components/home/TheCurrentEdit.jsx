@@ -400,17 +400,17 @@ export default function TheCurrentEdit() {
     // ─── Loading ─────────────────────────────────────
     if (loading) {
         return (
-            <section id="the-current-edit" className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
+            <section id="the-current-edit" className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
                 <SectionHeader
                     title="The Current Edit"
-                    subtitle="New arrivals worth reaching for — drop by drop, season by season."
+                    subtitle="New arrivals worth reaching for, drop by drop, season by season."
                     className="mb-6 md:mb-8"
                 />
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 max-w-[1440px] mx-auto">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className={i >= 3 ? "block md:hidden xl:block" : ""}>
-                            <AspectRatio ratio={3 / 4} className="rounded-lg bg-neutral-100">
-                                <Skeleton className="h-full w-full rounded-lg" />
+                            <AspectRatio ratio={3 / 4} className="bg-neutral-100">
+                                <Skeleton className="h-full w-full" />
                             </AspectRatio>
                             <div className="pt-3 space-y-2">
                                 <Skeleton className="h-4 w-3/4" />
@@ -425,7 +425,7 @@ export default function TheCurrentEdit() {
 
     if (error) {
         return (
-            <section id="the-current-edit" className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
+            <section id="the-current-edit" className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
                 <SectionHeader title="The Current Edit" className="mb-6 md:mb-8" />
                 <p className="montserrat-500 text-primary/70 text-center">
                     Error loading collection: {error}
@@ -437,14 +437,14 @@ export default function TheCurrentEdit() {
     if (!products.length) return null;
 
     return (
-        <section id="the-current-edit" className="bg-background px-[5%] pt-10 pb-6 md:pt-10 md:pb-12">
+        <section id="the-current-edit" className="bg-background px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
             <SectionHeader
                 title="The Current Edit"
-                subtitle="New arrivals worth reaching for — drop by drop, season by season."
+                subtitle="New arrivals worth reaching for, drop by drop, season by season."
                 className="mb-6 md:mb-8"
             />
 
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 max-w-[1440px] mx-auto">
                 {products.slice(0, 4).map((product, index) => {
                     const addState = addBusy[product.id];
                     return (
@@ -461,9 +461,9 @@ export default function TheCurrentEdit() {
                     );
                 })}
             </div>
-            <div className="mt-5 flex justify-center md:mt-6">
+            <div className="mt-6 flex justify-center md:mt-8">
                 <Link href={`/collections/${COLLECTION_HANDLE}`}
-                    className="inline-flex items-center justify-center rounded-lg border border-primary px-6 py-3 text-[11px] md:text-[12px] montserrat-600 uppercase tracking-[0.16em] text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
+                    className="inline-flex items-center justify-center rounded-lg border border-primary px-8 py-3 text-[11px] md:text-[12px] montserrat-600 uppercase tracking-[0.16em] text-primary transition-colors duration-200 hover:bg-primary hover:text-white"
                 >
                     View All
                 </Link>

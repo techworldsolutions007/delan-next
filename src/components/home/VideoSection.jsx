@@ -47,7 +47,7 @@ export default function VideoSection() {
     }, [isIOS]);
 
     return (
-        <section className="bg-white px-[5%] pt-10 pb-6 text-center md:pb-10">
+        <section className="bg-white px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
             <SectionHeader
                 title="Behind The Scenes"
                 subtitle="The Art of Creating Elegance"

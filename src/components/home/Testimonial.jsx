@@ -258,13 +258,13 @@ export default function TestimonialWomenDummy() {
       : customerCount.toLocaleString("en-IN");
 
   return (
-    <section ref={sectionRef} id="reviews-section" className="bg-accent px-[5%] py-12">
-      <div className="mx-auto max-w-8xl">
+    <section ref={sectionRef} id="reviews-section" className="bg-accent px-3 sm:px-6 lg:px-10 pt-10 pb-8 md:pt-14 md:pb-12">
+      <div className="mx-auto max-w-[1440px]">
         <h2 className="text-center cormorant-garamond-700 uppercase text-primary tracking-tight text-2xl sm:text-3xl md:text-4xl xl:text-5xl">
           Worn &amp; Loved
         </h2>
         <p className="text-center montserrat-500 tracking-[0.05em] text-primary/70 text-sm sm:text-base md:text-lg mt-2 mb-6 md:mb-8">
-          From first wear to everyday favourite — in their own words.
+          From first wear to everyday favourite, in their own words.
         </p>
 
         {/* ✅ CAROUSEL (same as you have) */}

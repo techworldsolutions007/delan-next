@@ -21,9 +21,23 @@ import { releaseFocusForCheckout } from "@/lib/checkout-helpers";
 import { normalizeLooks } from "@/lib/looks";
 
 // ✅ Queries
-import { CART_CREATE, CART_LINES_ADD, GET_COLLECTION_BY_HANDLE } from "@/lib/queries";
+import { CART_CREATE, CART_LINES_ADD, GET_COLLECTION_BY_HANDLE, GET_SALE_AUGMENT } from "@/lib/queries";
 import { shopify } from "@/lib/shopify";
 import { trackAddToCart } from "@/lib/analytics";
+
+const READY_TO_SHIP_TAGS = new Set([
+  "ready-to-ship", "express", "express-collection",
+  "ships-in-one-day", "1-day-delivery"
+]);
+
+const EXPRESS_COLLECTION_HANDLES = new Set([
+  "express-collection", "express", "ready-to-ship",
+  "ships-in-one-day", "1-day-delivery"
+]);
+
+const OFFER_COLLECTION_HANDLES = new Set([
+  "offer", "offers", "sale", "deals", "on-sale", "sale-products"
+]);
 
 const CART_QUERY = /* GraphQL */ `
   query CartQuery($cartId: ID!) {
@@ -47,9 +61,21 @@ const SEARCH_PRODUCTS = `
           id title handle
           createdAt
           publishedAt
+          tags
+          collections(first: 10) { edges { node { handle } } }
           images(first: 2) { edges { node { url altText } } }
           priceRange { minVariantPrice { amount currencyCode } }
-          variants(first: 10) { edges { node { id availableForSale quantityAvailable } } }
+          variants(first: 10) {
+            edges {
+              node {
+                id
+                availableForSale
+                quantityAvailable
+                price { amount currencyCode }
+                compareAtPrice { amount currencyCode }
+              }
+            }
+          }
           metafield(namespace: "reviews", key: "rating") { value }
         }
       }
@@ -89,28 +115,13 @@ const getSearchSortArgs = (sort) => {
 };
 const LookCollection = React.lazy(() => import("../Product/LookCollection"));
 const SuggestionSection = React.lazy(() => import("../Product/SuggestionSection"));
-const WatchAndBuy = React.lazy(() => import("../home/WatchAndBuy"));
 const RecentlyViewed = React.lazy(() => import("../Product/RecentlyViewed"));
-const CuratedCollections = React.lazy(() => import("../home/CuratedCollections"));
-
 const COLLECTION_TAIL_SECTIONS = [
-  {
-    key: "curated-collections",
-    minHeight: "65vh",
-    rootMargin: "350px 0px",
-    render: () => <CuratedCollections />,
-  },
   {
     key: "suggestions",
     minHeight: "60vh",
     rootMargin: "350px 0px",
     render: () => <SuggestionSection />,
-  },
-  {
-    key: "watch-and-buy",
-    minHeight: "55vh",
-    rootMargin: "350px 0px",
-    render: () => <WatchAndBuy />,
   },
   {
     key: "recently-viewed",
@@ -382,7 +393,7 @@ function Price({ amount, code }) {
   );
 }
 
-function toProductShape(node) {
+function toProductShape(node, currentCollectionHandle = "") {
   let ratingValue = 0;
   const ratingField = node?.metafield?.value;
   if (ratingField) {
@@ -415,6 +426,17 @@ function toProductShape(node) {
       ? [singleSub]
       : [];
 
+  const productTags = Array.isArray(node.tags)
+    ? node.tags.map(t => (t || "").toLowerCase().trim().replace(/[\s_]+/g, "-"))
+    : [];
+  const collectionHandles = (node.collections?.edges ?? []).map(
+    ({ node: c }) => (c?.handle || "").toLowerCase().trim()
+  );
+  const isReadyToShip =
+    EXPRESS_COLLECTION_HANDLES.has((currentCollectionHandle || "").toLowerCase()) ||
+    collectionHandles.some(h => EXPRESS_COLLECTION_HANDLES.has(h)) ||
+    productTags.some(t => READY_TO_SHIP_TAGS.has(t));
+
   return {
     id: node.id,
     title: node.title,
@@ -434,12 +456,13 @@ function toProductShape(node) {
     subcategorySlug: subcategorySlugs[0] || "",
     // New: unified array used for all filtering.
     subcategorySlugs,
+    isReadyToShip,
   };
 }
 
-function parseProductsFromCollection(collectionData) {
+function parseProductsFromCollection(collectionData, currentCollectionHandle = "") {
   const edges = collectionData?.products?.edges ?? [];
-  return edges.map(({ node }) => toProductShape(node));
+  return edges.map(({ node }) => toProductShape(node, currentCollectionHandle));
 }
 
 const getStoredCartId = () => {
@@ -473,7 +496,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
   const [bannerDesktop, setBannerDesktop] = useState(() => initialData?.collection?.desktopBanner?.reference?.image?.url || "");
   const [bannerMobile, setBannerMobile] = useState(() => initialData?.collection?.mobileBanner?.reference?.image?.url || "");
   const [rawProducts, setRawProducts] = useState(() =>
-    hasServerData ? parseProductsFromCollection(initialData.collection) : []
+    hasServerData ? parseProductsFromCollection(initialData.collection, handleProp || paramsHandle || "") : []
   );
   const [looks, setLooks] = useState(() =>
     hasServerData ? normalizeLooks(initialData?.collection) : []
@@ -536,11 +559,16 @@ export default function CollectionPage({ handle: handleProp, params, initialData
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // On initial mount, skip client fetch — state is already hydrated from server data
-      if (!isSearchMode && hasServerData && !serverDataUsedRef.current) {
+      // On initial mount, skip client fetch — state is already hydrated from server data.
+      // Exception: Sale/Offer collections still need to run so the augmentation query
+      // merges best-selling discounted products into the initial list.
+      const isOfferHandle =
+        !isSearchMode && OFFER_COLLECTION_HANDLES.has((handle || "").toLowerCase());
+      if (!isSearchMode && hasServerData && !serverDataUsedRef.current && !isOfferHandle) {
         serverDataUsedRef.current = true;
         return;
       }
+      if (!serverDataUsedRef.current) serverDataUsedRef.current = true;
       setLoading(true);
       setError("");
       setHasNextPage(false);
@@ -593,8 +621,32 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           setNavConfig(parseNavConfig(col));
           setLooks(normalizeLooks(col));
 
-          const pageProducts = parseProductsFromCollection(col);
+          let pageProducts = parseProductsFromCollection(col, handle);
           const pageInfo = col.products?.pageInfo;
+
+          // Augment Sale/Offer collection with best-selling discounted products
+          if (OFFER_COLLECTION_HANDLES.has((handle || "").toLowerCase())) {
+            try {
+              const augData = await shopify(GET_SALE_AUGMENT, { first: 250 });
+              if (cancelled) return;
+              const existingIds = new Set(pageProducts.map(p => p.id));
+              const augProducts = (augData?.products?.edges ?? [])
+                .map(({ node }) => node)
+                .filter(n => {
+                  const vars = n?.variants?.edges ?? [];
+                  return vars.some(v => {
+                    const cap = Number(v?.node?.compareAtPrice?.amount);
+                    const price = Number(v?.node?.price?.amount);
+                    return Number.isFinite(cap) && Number.isFinite(price) && cap > price;
+                  });
+                })
+                .map(n => toProductShape(n, handle))
+                .filter(p => !existingIds.has(p.id));
+              pageProducts = [...pageProducts, ...augProducts];
+            } catch {
+              // if augmentation fails, keep the base collection products
+            }
+          }
 
           setRawProducts(pageProducts);
           setHasNextPage(pageInfo?.hasNextPage || false);
@@ -659,9 +711,13 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         const data = await shopify(GET_COLLECTION_BY_HANDLE, { handle, first: 20, after: endCursor, ...collectionArgs });
         const col = data?.collection;
         if (col) {
-          const prods = parseProductsFromCollection(col);
+          const prods = parseProductsFromCollection(col, handle);
           const pageInfo = col.products?.pageInfo;
-          setRawProducts(prev => [...prev, ...prods]);
+          setRawProducts(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const fresh = prods.filter(p => !existingIds.has(p.id));
+            return [...prev, ...fresh];
+          });
           setHasNextPage(pageInfo?.hasNextPage || false);
           setEndCursor(pageInfo?.endCursor || null);
         }
@@ -998,7 +1054,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
   /* ----------------------------- render ----------------------------- */
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 md:px-8 py-10">
+      <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10 py-10">
         <Skeleton className="h-64 w-full mb-8" />
         <div className="flex items-end justify-between mb-6">
           <Skeleton className="h-10 w-64" />
@@ -1066,12 +1122,12 @@ export default function CollectionPage({ handle: handleProp, params, initialData
       )}
 
       {/* ===== Features (controls) ===== */}
-      <div className="mx-auto max-w-7xl px-4 md:px-8 pt-8 pb-2">
+      <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10 pt-10 pb-2 md:pt-12">
         <h1 className="cormorant-garamond-700 uppercase text-primary text-3xl md:text-4xl lg:text-4xl text-center sm:text-start">
           {title}
         </h1>
 
-        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-neutral-500 text-center sm:text-left">
             {products.length} item{products.length === 1 ? "" : "s"}
           </p>
@@ -1182,7 +1238,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             className={`bg-white/95 backdrop-blur-md z-40 transition-transform duration-300 sm:static sticky ${showHeader ? "top-[76px] sm:top-[80px]" : "top-0"
               }`}
           >
-            <div className="mx-auto max-w-7xl px-4 md:px-8 pt-3">
+            <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10 pt-3">
               {/* Mobile strip */}
               <SubcategoryStrip items={items} activeKey={activeKey} />
               {/* Desktop strip */}
@@ -1199,7 +1255,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         </React.Suspense>
       ) : (
         /* Standard product grid */
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
+        <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10">
           {products.length === 0 ? (
             <div className="py-20 text-center text-neutral-600">
               {isSearchMode
@@ -1210,7 +1266,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             </div>
           ) : (
             <div
-              className={`mt-4 grid gap-4 md:gap-6 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+              className={`mt-6 grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
                 } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
             >
               {pagedProducts.map((product, index) => {
@@ -1237,13 +1293,13 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           <div ref={observerTarget} className="w-full pb-20">
             {fetchingMore && (
               <div
-                className={`grid gap-4 md:gap-6 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+                className={`grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
                   } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
               >
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex flex-col gap-3">
                     <AspectRatio ratio={3 / 4}>
-                      <Skeleton className="h-full w-full rounded-2xl" />
+                      <Skeleton className="h-full w-full" />
                     </AspectRatio>
                     <div className="flex flex-col items-center gap-2 px-4">
                       <Skeleton className="h-5 w-3/4 rounded-md" />

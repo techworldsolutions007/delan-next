@@ -7,7 +7,6 @@ import Marquee from './Marquee';
 import Footer from './Footer';
 import Testimonial from './home/Testimonial';
 import PrBanner from './home/PrBanner';
-import DelanShiny from './home/DelanShiny';
 import WhatsAppButton from './WhatsAppButton';
 import QuickBuyDrawer from './Product/QuickBuyDrawer';
 import ScrollToTop from '@/utils/ScrollToTop';
@@ -32,7 +31,6 @@ export default function ClientLayout({ children }) {
           </div>
           {!isProductPage && <Testimonial />}
           {!isProductPage && <PrBanner />}
-          <DelanShiny />
           <Footer />
           <WhatsAppButton />
           <QuickBuyDrawer />

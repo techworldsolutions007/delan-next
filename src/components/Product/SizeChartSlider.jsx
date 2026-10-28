@@ -399,7 +399,7 @@ const SizeChartSlider = ({ isOpen, onClose, productHandle }) => {
                 <div className="mx-6 mt-6 rounded-lg px-4 py-3 flex items-start gap-3" style={{ background: '#fdf8fa', border: '1px solid #f0e4ea' }}>
                   <Info size={14} className="text-[#642c44] flex-shrink-0 mt-0.5" />
                   <p className="montserrat-500 text-[10px] tracking-[0.04em] text-[#9e7a8a] leading-relaxed">
-                    Measure your body — not over clothing. Use a soft tape measure and keep it parallel to the floor for chest and waist.
+                    Measure your body, not over clothing. Use a soft tape measure and keep it parallel to the floor for chest and waist.
                   </p>
                 </div>
 

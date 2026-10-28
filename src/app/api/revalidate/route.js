@@ -7,8 +7,13 @@ const SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
 
 function verifyHmac(rawBody, hmacHeader) {
   if (!SECRET) {
-    // Allow through in dev if no secret is configured — log a warning
-    console.warn('[revalidate] SHOPIFY_WEBHOOK_SECRET not set — skipping HMAC check');
+    // In production SHOPIFY_WEBHOOK_SECRET must be set — reject all requests if missing
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[revalidate] SHOPIFY_WEBHOOK_SECRET is not set — rejecting request. Set it in Vercel env vars.');
+      return false;
+    }
+    // Dev only: skip HMAC so you can test without a real Shopify secret
+    console.warn('[revalidate] SHOPIFY_WEBHOOK_SECRET not set — skipping HMAC check (dev only)');
     return true;
   }
   const digest = crypto.createHmac('sha256', SECRET).update(rawBody, 'utf8').digest('base64');
@@ -42,6 +47,7 @@ export async function POST(req) {
   if (topic.startsWith('products/')) {
     const handle = payload.handle;
     revalidateTag('products');
+    revalidateTag('looks'); // looks embed product data (price, availability)
     if (handle) {
       revalidateTag(`product-${handle}`);
       revalidatePath(`/products/${handle}`);
@@ -61,6 +67,7 @@ export async function POST(req) {
   // inventory_levels/update — revalidate all products (availability may have changed)
   if (topic === 'inventory_levels/update') {
     revalidateTag('products');
+    revalidateTag('looks');
   }
 
   // blog articles

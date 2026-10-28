@@ -161,6 +161,14 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Keep PDP sticky image top in sync with navbar visibility
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--pdp-sticky-top',
+      showHeader ? '156px' : '20px'
+    );
+  }, [showHeader]);
+
   // wishlist count sync
   useEffect(() => {
     const syncCount = (detail) => {
@@ -452,7 +460,7 @@ export default function Navbar() {
                   aria-label="Account menu"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage alt="" />
+                    <AvatarImage alt={displayName} />
                     <AvatarFallback className="text-xs">
                       {avatarFallback}
                     </AvatarFallback>

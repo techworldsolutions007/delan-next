@@ -5,12 +5,12 @@ const PAGE_URL = `${SITE_URL}/fabric-care`;
 
 export const metadata = {
   title: 'Fabric Care Guide | How to Care for Your Delan Garments',
-  description: 'Learn how to wash, dry & store your Delan garments. Care tips for cotton, silk, chiffon & more — keep your women\'s fashion looking new for longer.',
+  description: 'Learn how to wash, dry & store your Delan garments. Care tips for cotton, silk, chiffon & more | keep your women\'s fashion looking new for longer.',
   alternates: { canonical: PAGE_URL },
   robots: { index: true, follow: true },
   openGraph: {
     title: 'Fabric Care Guide | How to Care for Your Delan Garments',
-    description: 'Washing, drying, and storage tips for every Delan fabric — keep your women\'s fashion looking fresh and lasting longer.',
+    description: 'Washing, drying, and storage tips for every Delan fabric | keep your women\'s fashion looking fresh and lasting longer.',
     type: 'website',
     url: PAGE_URL,
     images: [{ url: '/og-default.jpg', width: 1200, height: 630, alt: 'Delan Fabric Care Guide' }],
@@ -28,7 +28,7 @@ const jsonLdBlocks = [
     '@context': 'https://schema.org',
     '@type': 'HowTo',
     name: 'How to Care for Your Delan Garments',
-    description: 'Step-by-step fabric care guide for Delan women\'s fashion — washing, drying, and storage instructions for cotton, silk, chiffon, and more.',
+    description: 'Step-by-step fabric care guide for Delan women\'s fashion | washing, drying, and storage instructions for cotton, silk, chiffon, and more.',
     url: PAGE_URL,
     publisher: {
       '@type': 'Organization',

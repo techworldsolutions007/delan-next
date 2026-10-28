@@ -667,13 +667,56 @@ export const GET_COLLECTION_BY_HANDLE = /* GraphQL */ `
             handle
             createdAt
             publishedAt
+            tags
+            collections(first: 10) { edges { node { handle } } }
             images(first: 2) { edges { node { url altText } } }
             priceRange { minVariantPrice { amount currencyCode } }
-            variants(first: 10) { edges { node { id availableForSale quantityAvailable compareAtPrice { amount currencyCode } } } }
+            variants(first: 10) {
+              edges {
+                node {
+                  id
+                  availableForSale
+                  quantityAvailable
+                  price { amount currencyCode }
+                  compareAtPrice { amount currencyCode }
+                }
+              }
+            }
             metafield(namespace: "reviews", key: "rating") { value }
             subcategory: metafield(namespace: "custom", key: "subcategory") { value }
             subcategories: metafield(namespace: "custom", key: "subcategories") { value }
           }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_SALE_AUGMENT = /* GraphQL */ `
+  query GetSaleAugment($first: Int!) {
+    products(first: $first, sortKey: BEST_SELLING) {
+      edges {
+        node {
+          id
+          title
+          handle
+          createdAt
+          publishedAt
+          images(first: 2) { edges { node { url altText } } }
+          priceRange { minVariantPrice { amount currencyCode } }
+          variants(first: 10) {
+            edges {
+              node {
+                id
+                availableForSale
+                quantityAvailable
+                price { amount currencyCode }
+                compareAtPrice { amount currencyCode }
+              }
+            }
+          }
+          tags
+          collections(first: 10) { edges { node { handle } } }
         }
       }
     }

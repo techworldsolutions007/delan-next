@@ -5,12 +5,11 @@ const ReturnExchange = () => {
   const headingStyle = "montserrat-600 text-2xl text-primary/90 mt-8 mb-4";
   const paragraphStyle = "montserrat-400 text-gray-700 mb-4 leading-relaxed";
   const listStyle = "list-disc pl-5 space-y-2 mb-4 text-gray-700 leading-relaxed montserrat-400";
-  const linkStyle = "text-primary hover:underline";
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-white px-4 pt-10 md:pt-14 pb-12">
       <h1 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-5xl uppercase mb-4 md:mb-5 text-center">
-        Returns &amp; Exchanges — 7-Day Hassle-Free Policy
+        Returns &amp; Exchanges
       </h1>
 
       <div className="w-full max-w-4xl montserrat-400">
@@ -84,7 +83,6 @@ const ReturnExchange = () => {
           </ul>
 
           <h2 className={headingStyle}>4. Non-Returnable Items</h2>
-          <p className={paragraphStyle}>The following items are not eligible for return or exchange:</p>
           <ul className={listStyle}>
             <li>Items marked as "Final Sale" or "Non-Returnable".</li>
             <li>Customized or personalized products, unless received damaged or incorrect.</li>
@@ -113,26 +111,26 @@ const ReturnExchange = () => {
 
           <h2 className={headingStyle}>8. Cash on Delivery (COD)</h2>
           <ul className={listStyle}>
-            <li>Cash on Delivery (COD) is not available for orders exceeding Rs. 5,000.</li>
-            <li>DELAN reserves the right to enable or disable COD based on order value and serviceability.</li>
+            <li>Full COD is available on orders up to Rs. 4,599. For orders above Rs. 4,599, only Partial COD is available.</li>
+            <li>A Rs. 49 handling fee is charged on all orders at checkout.</li>
+            <li>A Rs. 200 handling fee is applicable on all COD and Partial COD orders.</li>
+            <li>Partial COD: On orders above Rs. 4,599, 10% of the order value will be charged upfront and is non-refundable. The remaining balance is collected at the time of delivery.</li>
+            <li>DELAN reserves the right to enable or disable COD based on order value, pin code serviceability, and other conditions.</li>
           </ul>
 
-          <h2 className={headingStyle}>9. Important Notes</h2>
+          <h2 className={headingStyle}>9. Return to Origin (RTO) Charges</h2>
           <ul className={listStyle}>
-            <li>All returned items are subject to quality inspection. DELAN reserves the right to reject returns that do not meet the policy conditions.</li>
-            <li>Products that fail the quality check will be sent back to the customer.</li>
-            <li>When returning an item, please ensure that the correct product is sent back. If a wrong item is returned, we will try our best to assist in recovering it; however, DELAN will not be responsible for any loss or damage.</li>
-            <li>Requests raised outside the defined timeline will not be accepted.</li>
+            <li>If a delivery attempt fails due to incorrect address, customer unavailability, or refusal to accept the package, the shipment will be returned to our warehouse. This is known as a Return to Origin (RTO).</li>
+            <li>A RTO charge of Rs. 300 will be deducted from the refund amount (or charged separately) to cover the two-way shipping cost incurred.</li>
+            <li>Please ensure your delivery address and contact number are correct at the time of placing the order, and that someone is available to receive the package.</li>
           </ul>
 
-          <h2 className={headingStyle}>10. Contact Us</h2>
-          <p className={paragraphStyle}>
-            If you have any questions or need assistance, please contact us: <br />
-            <span className="montserrat-600">Email:</span>{' '}
-            <a href="mailto:support@delanonline.com" className={linkStyle}>support@delanonline.com</a> <br />
-            <span className="montserrat-600">Phone:</span>{' '}
-            <a href="tel:+919310329849" className={linkStyle}>+91 93103 29849</a>
-          </p>
+          <h2 className={headingStyle}>11. Important Notes</h2>
+          <ul className={listStyle}>
+            <li>All returned items are subject to quality inspection. DELAN reserves the right to reject returns that do not meet policy conditions.</li>
+            <li>Products that fail the quality check will be sent back to the customer.</li>
+            <li>When returning an item, please ensure the correct product is sent back. DELAN will not be responsible for loss or damage of a wrong item returned.</li>
+          </ul>
         </div>
       </div>
     </div>

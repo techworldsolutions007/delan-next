@@ -23,12 +23,14 @@ const ARTICLE_META_QUERY = /* GraphQL */ `
 
 const getArticle = cache(async (blogHandle, articleHandle) => {
   try {
-    const data = await shopify(ARTICLE_META_QUERY, { blogHandle, articleHandle });
+    const data = await shopify(ARTICLE_META_QUERY, { blogHandle, articleHandle }, { tags: ['blogs'] });
     return data?.blog ?? null;
   } catch {
     return null;
   }
 });
+
+export const revalidate = 3600; // ISR fallback: refresh at most every 1 hour if webhook misses
 
 export async function generateMetadata({ params }) {
   const { blogHandle, articleHandle } = await params;

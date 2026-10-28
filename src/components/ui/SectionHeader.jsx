@@ -16,11 +16,12 @@ import { cn } from "@/lib/utils";
 export default function SectionHeader({
   title,
   subtitle,
-  showSubtitle = false,
+  showSubtitle,
   className = "",
   titleClassName = "",
   subtitleClassName = "",
 }) {
+  const renderSubtitle = showSubtitle === true && subtitle;
   return (
     <div className={cn("mx-auto max-w-3xl text-center text-primary", className)}>
       <h2
@@ -31,10 +32,10 @@ export default function SectionHeader({
       >
         {title}
       </h2>
-      {showSubtitle && subtitle ? (
+      {renderSubtitle ? (
         <p
           className={cn(
-            "mt-1.5 text-primary montserrat-500 text-[14px] md:text-[15px] leading-snug tracking-[0.025em]",
+            "mt-2 text-primary/70 montserrat-500 text-[13px] md:text-[14px] leading-snug tracking-[0.025em]",
             subtitleClassName
           )}
         >
