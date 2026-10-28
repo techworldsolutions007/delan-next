@@ -61,7 +61,7 @@ function getSliderHeight(vc) {
 }
 
 export default function CategoriesSection() {
-  const [visibleCount, setVisibleCount] = useState(3);
+  const [visibleCount, setVisibleCount] = useState(null);
   const [idx, setIdx] = useState(CLONE_COUNT);
   const [transitioning, setTransitioning] = useState(false);
   const timerRef = useRef(null);
@@ -128,6 +128,15 @@ export default function CategoriesSection() {
     touchStartX.current = null;
   };
 
+  // Show CSS-driven skeleton until JS determines screen width — prevents blank flash on mobile
+  if (visibleCount === null) {
+    return (
+      <section className="w-full pt-10 md:pt-14">
+        <div className="w-full bg-neutral-100 animate-pulse h-[150vw] md:h-[56vw] lg:h-[43.75vw]" />
+      </section>
+    );
+  }
+
   const offset = -(idx / EXTENDED.length) * 100;
   const containerWidthPct = (EXTENDED.length / visibleCount) * 100;
   const height = getSliderHeight(visibleCount);
@@ -162,11 +171,21 @@ export default function CategoriesSection() {
                 className="block h-full w-full relative group overflow-hidden rounded-none"
                 draggable="false"
               >
+                {/* Mobile image — hidden on md+ */}
                 <Image
-                  src={visibleCount === 1 ? (slide.imageMobile || slide.image) : slide.image}
+                  src={slide.imageMobile || slide.image}
                   alt={slide.title}
                   fill
-                  className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
+                  className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03] md:hidden"
+                  draggable="false"
+                  priority={i >= CLONE_COUNT && i < CLONE_COUNT + n}
+                />
+                {/* Desktop image — hidden below md */}
+                <Image
+                  src={slide.image}
+                  alt={slide.title}
+                  fill
+                  className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03] hidden md:block"
                   draggable="false"
                   priority={i >= CLONE_COUNT && i < CLONE_COUNT + n}
                 />

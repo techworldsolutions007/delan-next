@@ -107,7 +107,8 @@ export default function Home() {
 
       {
         key: "categories-section",
-        minHeight: "60vh",
+        minHeight: "43.75vw",
+        mobileMinHeight: "150vw",
         render: () => <CategoriesSection />,
       },
       {

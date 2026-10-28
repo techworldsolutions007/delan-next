@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 // Blog.jsx
 import React, { useState, useEffect } from 'react';
 
@@ -37,18 +37,11 @@ const GET_BLOG_ARTICLES = `
 const Blog = ({ blogHandle: blogHandleProp, params: propParams } = {}) => {
   const routerParams = useParams();
   const params = propParams || routerParams || {};
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  // 1) direct prop, then route param, then :handle
+  // direct prop → route param → env fallback
   const routeHandle = blogHandleProp ?? params.blogHandle ?? params.handle ?? '';
-  // 2) query ?handle=...
-  const qsHandle = searchParams.get('handle') ?? '';
-  // 3) env fallback
   const envHandle = process.env.NEXT_PUBLIC_SHOPIFY_DEFAULT_BLOG_HANDLE ?? '';
-
-  // Final, trimmed handle
-  const blogHandle = decodeURIComponent((routeHandle || qsHandle || envHandle).trim());
+  const blogHandle = decodeURIComponent((routeHandle || envHandle).trim());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
