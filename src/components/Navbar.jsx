@@ -416,7 +416,7 @@ export default function Navbar() {
               alt="DELAN"
               width={200}
               height={68}
-              className="mx-auto h-[42px] max-w-[128px] sm:h-[64px] sm:max-w-none md:h-[68px] w-auto"
+              className="mx-auto h-[32px] max-w-[100px] sm:h-[64px] sm:max-w-none md:h-[68px] w-auto"
               priority
             />
           </Link>
@@ -430,24 +430,12 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
             aria-label="Search"
             title="Search ( / )"
           >
-            <Search className="h-5 w-5 text-primary" />
+            <Search className="h-4 w-4 text-primary" />
           </button>
-
-          {/* ✅ Keep navbar same: Mobile Profile/SignUp icon */}
-          {authChecked && (
-            <a
-              href={loggedIn ? accountUrl : registerUrl}
-              className="sm:hidden inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-black/5"
-              aria-label={loggedIn ? "Profile" : "Sign Up"}
-              title={loggedIn ? "Profile" : "Sign Up"}
-            >
-              <UserRound className="h-5 w-5 text-primary" />
-            </a>
-          )}
 
           {/* Auth area (desktop) */}
           {!authChecked ? (
@@ -527,11 +515,11 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
             aria-label="Open cart"
           >
             <span className="relative inline-flex">
-              <ShoppingBag className="h-5 w-5 text-primary" />
+              <ShoppingBag className="h-4 w-4 text-primary" />
               {cartQty > 0 && (
                 <span className="absolute -top-2 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] text-white">
                   {cartQty}
@@ -710,6 +698,9 @@ export default function Navbar() {
               items={main}
               onClose={closeMobile}
               onSubmenuOpenChange={setMobileSubmenuOpen}
+              loggedIn={loggedIn}
+              accountUrl={accountUrl}
+              registerUrl={registerUrl}
             />
           )}
         </AnimatePresence>,
@@ -723,21 +714,21 @@ function HamburgerLines({ open }) {
   const lineTransition = { duration: MOBILE_ICON_TRANSITION_MS / 1000, ease: [0.22, 1, 0.36, 1] };
 
   return (
-    <span className="relative block h-5 w-5" aria-hidden="true">
+    <span className="relative block h-4 w-4" aria-hidden="true">
       <motion.span
-        className="absolute left-0 top-[3px] h-[2px] w-5 rounded-full bg-primary"
+        className="absolute left-0 top-[2px] h-[2px] w-4 rounded-full bg-primary"
         initial={{ y: 0, rotate: 0 }}
-        animate={open ? { y: 7, rotate: 45 } : { y: 0, rotate: 0 }}
+        animate={open ? { y: 6, rotate: 45 } : { y: 0, rotate: 0 }}
         transition={lineTransition}
       />
       <motion.span
-        className="absolute left-0 top-[9px] h-[2px] w-5 rounded-full bg-primary"
+        className="absolute left-0 top-[7px] h-[2px] w-4 rounded-full bg-primary"
         initial={{ opacity: 1 }}
         animate={open ? { opacity: 0 } : { opacity: 1 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
       />
       <motion.span
-        className="absolute left-0 top-[15px] h-[2px] w-5 rounded-full bg-primary"
+        className="absolute left-0 top-[12px] h-[2px] w-4 rounded-full bg-primary"
         initial={{ y: 0, rotate: 0 }}
         animate={open ? { y: -5, rotate: -45 } : { y: 0, rotate: 0 }}
         transition={lineTransition}
@@ -753,10 +744,10 @@ function MobileMenuToggle({ open, submenuOpen, onClick }) {
       onClick={onClick}
       aria-expanded={open}
       aria-label={submenuOpen ? "Go back" : open ? "Close menu" : "Open menu"}
-      className="md:hidden relative z-[110] inline-flex h-9 w-9 shrink-0 items-center justify-center rounded p-2 hover:bg-black/5 transition-colors"
+      className="md:hidden relative z-[110] inline-flex h-8 w-8 shrink-0 items-center justify-center rounded p-1.5 hover:bg-black/5 transition-colors"
     >
       {submenuOpen ? (
-        <ArrowLeft className="h-6 w-6 text-primary" aria-hidden="true" />
+        <ArrowLeft className="h-4 w-4 text-primary" aria-hidden="true" />
       ) : (
         <HamburgerLines open={open} />
       )}
@@ -769,6 +760,9 @@ function AnimatedMobileMenu({
   items,
   onClose,
   onSubmenuOpenChange,
+  loggedIn,
+  accountUrl,
+  registerUrl,
 }) {
   const [activeMenuPath, setActiveMenuPath] = useState([]);
   const [direction, setDirection] = useState(1);
@@ -932,14 +926,17 @@ function AnimatedMobileMenu({
                   );
                 })}
                 {isMainMenu && (
-                  <motion.div variants={itemVariants}>
-                    <Link href="/track-order"
-                      onClick={onClose}
-                      className={linkBase}
-                    >
-                      My Orders
-                    </Link>
-                  </motion.div>
+                  <>
+                    <motion.div variants={itemVariants}>
+                      <a
+                        href={accountUrl}
+                        onClick={onClose}
+                        className={linkBase}
+                      >
+                        My Account
+                      </a>
+                    </motion.div>
+                  </>
                 )}
               </nav>
 

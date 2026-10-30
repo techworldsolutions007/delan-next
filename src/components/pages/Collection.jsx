@@ -5,22 +5,16 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Rows2, Columns2 } from "lucide-react";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Check, X, SlidersHorizontal, Rows2, Columns2, ChevronDown } from "lucide-react";
 import LazySection from "@/components/LazySection";
 import ProductCard from "@/components/Product/ProductCard";
 import { useQuickBuy } from "@/context/QuickBuyContext";
 import { releaseFocusForCheckout } from "@/lib/checkout-helpers";
 import { normalizeLooks } from "@/lib/looks";
 
-// ✅ Queries
 import { CART_CREATE, CART_LINES_ADD, GET_COLLECTION_BY_HANDLE, GET_SALE_AUGMENT } from "@/lib/queries";
 import { shopify } from "@/lib/shopify";
 import { trackAddToCart } from "@/lib/analytics";
@@ -48,7 +42,6 @@ const CART_QUERY = /* GraphQL */ `
   }
 `;
 
-/* 🔎 Search mode (for /search?q=...) */
 const SEARCH_PRODUCTS = `
   query SearchProducts($query: String!, $first: Int!, $after: String, $sortKey: ProductSortKeys, $reverse: Boolean) {
     products(first: $first, query: $query, after: $after, sortKey: $sortKey, reverse: $reverse) {
@@ -65,12 +58,13 @@ const SEARCH_PRODUCTS = `
           collections(first: 10) { edges { node { handle } } }
           images(first: 2) { edges { node { url altText } } }
           priceRange { minVariantPrice { amount currencyCode } }
-          variants(first: 10) {
+          variants(first: 20) {
             edges {
               node {
                 id
                 availableForSale
                 quantityAvailable
+                selectedOptions { name value }
                 price { amount currencyCode }
                 compareAtPrice { amount currencyCode }
               }
@@ -86,9 +80,8 @@ const SEARCH_PRODUCTS = `
 const BRAND = "#642c44";
 const CART_ID_KEY = "shopifyCartId";
 const MOBILE_COLS_KEY = "collection_mobile_cols";
-const PAGE_SIZE = 20; // products per page
+const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
 
-// Map UI sort value → Shopify server-side sort args (collection products)
 const getCollectionSortArgs = (sort) => {
   switch (sort) {
     case "date-desc": return { sortKey: "CREATED", reverse: true };
@@ -101,7 +94,6 @@ const getCollectionSortArgs = (sort) => {
   }
 };
 
-// Map UI sort value → Shopify server-side sort args (top-level product search)
 const getSearchSortArgs = (sort) => {
   switch (sort) {
     case "date-desc": return { sortKey: "CREATED_AT", reverse: true };
@@ -113,6 +105,16 @@ const getSearchSortArgs = (sort) => {
     default: return { sortKey: "RELEVANCE", reverse: false };
   }
 };
+
+const SORT_OPTIONS = [
+  { value: 'featured', label: 'Featured' },
+  { value: 'date-desc', label: 'Newest First' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'title-asc', label: 'Title: A–Z' },
+  { value: 'title-desc', label: 'Title: Z–A' },
+];
+
 const LookCollection = React.lazy(() => import("../Product/LookCollection"));
 const SuggestionSection = React.lazy(() => import("../Product/SuggestionSection"));
 const RecentlyViewed = React.lazy(() => import("../Product/RecentlyViewed"));
@@ -131,7 +133,6 @@ const COLLECTION_TAIL_SECTIONS = [
   },
 ];
 
-/* ----------------------------- GoKwik setup ----------------------------- */
 const normalizeGokwikEnv = (raw) => {
   const v = (raw || "").toLowerCase();
   if (["prod", "production", "live"].includes(v)) return "production";
@@ -146,60 +147,31 @@ const GOKWIK_STORE_ID = Number.isFinite(Number(RAW_STORE_ID)) && RAW_STORE_ID !=
 const GOKWIK_FB_PIXEL = (process.env.NEXT_PUBLIC_FB_PIXEL_IDS || "").trim() || undefined;
 
 const NORMALIZE_SLUG = (slug) =>
-  (slug || "")
-    .toString()
-    .trim()
-    .toLowerCase();
+  (slug || "").toString().trim().toLowerCase();
 
 const slugToLabel = (slug) => {
   const cleaned = (slug || "")
-    .toString()
-    .trim()
-    .replace(/[-_]+/g, " ")
-    .replace(/\s+/g, " ");
+    .toString().trim().replace(/[-_]+/g, " ").replace(/\s+/g, " ");
   if (!cleaned) return "";
-  return cleaned
-    .split(" ")
-    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ""))
-    .join(" ");
+  return cleaned.split(" ").map((w) => (w ? w[0].toUpperCase() + w.slice(1) : "")).join(" ");
 };
 
 const parseDisplayOrder = (raw) => {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed
-        .map((v) => NORMALIZE_SLUG(v))
-        .filter(Boolean);
-    }
-  } catch {
-    // fall through to string parsing
-  }
-  return raw
-    .toString()
-    .split(/[\n,•;|]+/g)
-    .map((v) => NORMALIZE_SLUG(v))
-    .filter(Boolean);
+    if (Array.isArray(parsed)) return parsed.map((v) => NORMALIZE_SLUG(v)).filter(Boolean);
+  } catch { }
+  return raw.toString().split(/[\n,•;|]+/g).map((v) => NORMALIZE_SLUG(v)).filter(Boolean);
 };
 
-// Parses the custom.subcategories list metafield value into an array of
-// normalised slugs. Accepts JSON arrays, or newline/comma/bullet text.
 const parseListMetafield = (raw) => {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.map((v) => NORMALIZE_SLUG(v)).filter(Boolean);
-    }
-  } catch {
-    // fall through to text splitting
-  }
-  return raw
-    .toString()
-    .split(/[\n,•;|]+/g)
-    .map((v) => NORMALIZE_SLUG(v))
-    .filter(Boolean);
+    if (Array.isArray(parsed)) return parsed.map((v) => NORMALIZE_SLUG(v)).filter(Boolean);
+  } catch { }
+  return raw.toString().split(/[\n,•;|]+/g).map((v) => NORMALIZE_SLUG(v)).filter(Boolean);
 };
 
 function parseNavConfig(col) {
@@ -212,16 +184,13 @@ function parseNavConfig(col) {
     const navTitle = ncRef?.navTitle?.value || "";
     const showAllRaw = ncRef?.showAllTab?.value;
     const showAllTab =
-      typeof showAllRaw === "string"
-        ? showAllRaw.toLowerCase() === "true"
-        : Boolean(showAllRaw);
+      typeof showAllRaw === "string" ? showAllRaw.toLowerCase() === "true" : Boolean(showAllRaw);
     const filterNamespace = (ncRef?.filterNamespace?.value || "").toString().trim();
     const filterKey = (ncRef?.filterKey?.value || "").toString().trim();
     const displayOrderSlugs = parseDisplayOrder(ncRef?.displayOrder?.value || "");
     const childEdges = ncRef?.childCollectionsField?.references?.edges || [];
     const childCollections = childEdges
-      .map((e) => e?.node)
-      .filter(Boolean)
+      .map((e) => e?.node).filter(Boolean)
       .map((n) => ({ id: n.id, handle: n.handle, title: n.title }));
     return { mode, navTitle, showAllTab, filterNamespace, filterKey, displayOrderSlugs, childCollections };
   } catch {
@@ -230,169 +199,16 @@ function parseNavConfig(col) {
 }
 
 const deriveSubcategorySlugs = (rawProducts, navConfig) => {
-  const explicit = Array.isArray(navConfig?.displayOrderSlugs)
-    ? navConfig.displayOrderSlugs
-    : [];
+  const explicit = Array.isArray(navConfig?.displayOrderSlugs) ? navConfig.displayOrderSlugs : [];
   if (explicit.length) return explicit;
-
   const set = new Set();
   for (const p of rawProducts || []) {
-    // Read from the unified subcategorySlugs array
-    if (Array.isArray(p?.subcategorySlugs)) {
-      for (const s of p.subcategorySlugs) set.add(s);
-    }
+    if (Array.isArray(p?.subcategorySlugs)) for (const s of p.subcategorySlugs) set.add(s);
   }
   return Array.from(set);
 };
 
-/* ─────────────────────────────────────────────────────────────────────────
- * SubcategoryStrip
- * Premium mobile-only horizontal chip strip with:
- *  • scroll-aware left/right fades
- *  • peek of next chip (intentional 20-30% cut-off)
- *  • auto-scroll active chip into view
- * ───────────────────────────────────────────────────────────────────────── */
-function SubcategoryStrip({ items, activeKey, onSelect }) {
-  const scrollRef = useRef(null);
-  const [showLeft, setShowLeft] = useState(false);
-  const [showRight, setShowRight] = useState(false);
-  const buttonRefs = useRef({});
-
-  // Measure whether fades should be shown
-  const updateFades = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setShowLeft(el.scrollLeft > 4);
-    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    updateFades();
-    el.addEventListener("scroll", updateFades, { passive: true });
-    const ro = new ResizeObserver(updateFades);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("scroll", updateFades);
-      ro.disconnect();
-    };
-  }, [updateFades]);
-
-  // Scroll active chip into view whenever activeKey changes
-  useEffect(() => {
-    const key = activeKey ?? "__all__";
-    const btn = buttonRefs.current[key];
-    if (btn) {
-      btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-    }
-  }, [activeKey]);
-
-  if (!items || items.length === 0) return null;
-
-  return (
-    // Outer container: visible on mobile only; desktop gets normal flow
-    <div className="relative sm:hidden">
-      {/* Left fade — only when scrolled past start */}
-      {showLeft && (
-        <div
-          className="absolute left-0 top-0 bottom-[3px] w-10 z-10 pointer-events-none"
-          style={{ background: "linear-gradient(to right, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)" }}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Right fade — only when more content to the right */}
-      {showRight && (
-        <div
-          className="absolute right-0 top-0 bottom-[3px] w-14 z-10 pointer-events-none"
-          style={{ background: "linear-gradient(to left, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)" }}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Scrollable row — padded right so last chip peeks (intentional cut-off) */}
-      <div
-        ref={scrollRef}
-        className="flex items-center gap-2 overflow-x-auto pb-3"
-        style={{
-          scrollbarWidth: "none",          /* Firefox */
-          msOverflowStyle: "none",         /* IE/Edge */
-          /* Right padding creates the "peek" of next pill */
-          paddingRight: "3.5rem",
-          paddingLeft: "0px",
-        }}
-      >
-        {items.map(({ key, label, isActive, onClick }) => (
-          <button
-            key={key}
-            ref={(el) => { buttonRefs.current[key] = el; }}
-            type="button"
-            onClick={onClick}
-            className={`flex-shrink-0 whitespace-nowrap px-4 py-1.5 text-sm tracking-[0.025em] uppercase font-medium rounded-full transition-colors ${isActive
-              ? "bg-primary text-white"
-              : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-              }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Indicator line sits BELOW chips, not overlapping */}
-      <div className="h-px bg-neutral-200 opacity-60" />
-    </div>
-  );
-}
-
-/* Desktop-only flat strip (no fancy JS needed) */
-function SubcategoryStripDesktop({ items }) {
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="hidden sm:block">
-      <div className="flex items-center justify-center gap-2 pb-3 overflow-x-auto">
-        {items.map(({ key, label, isActive, onClick }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={onClick}
-            className={`flex-shrink-0 whitespace-nowrap px-4 py-1.5 text-sm font-medium uppercase tracking-[0.025em] rounded-full transition-colors ${isActive
-              ? "bg-primary text-white"
-              : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-              }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="h-px bg-neutral-200 opacity-60" />
-    </div>
-  );
-}
-
-
-
-
-/* ── helpers ── */
-function Stars({ value = 0 }) {
-  const v = Math.max(0, Math.min(5, Math.round(Number(value) || 0)));
-  return (
-    <div className="h-5 leading-none text-[#f5a623] text-[15px]">
-      {"★".repeat(v)}
-      {"☆".repeat(5 - v)}
-    </div>
-  );
-}
-
-function Price({ amount, code }) {
-  const num = Number.parseFloat(amount ?? 0);
-  return (
-    <p className="montserrat-500 text-[0.95rem] text-primary">
-      ₹{Number.isFinite(num) ? num.toFixed(0) : "0"}
-    </p>
-  );
-}
-
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
 function toProductShape(node, currentCollectionHandle = "") {
   let ratingValue = 0;
   const ratingField = node?.metafield?.value;
@@ -412,19 +228,12 @@ function toProductShape(node, currentCollectionHandle = "") {
   const isAvailable = (vNode) => vNode && vNode.availableForSale && (vNode.quantityAvailable == null || vNode.quantityAvailable > 0);
   const firstAvailable = vars.find(v => isAvailable(v.node))?.node || vars[0]?.node;
   const compareAtPrice = vars[0]?.node?.compareAtPrice?.amount || null;
-
   const img1Url = img1?.url || "https://via.placeholder.com/600x800";
   const img2Url = img2?.url && img2?.url !== img1?.url ? img2.url : null;
 
-  // Build unified subcategorySlugs array:
-  // prefer custom.subcategories (list); fall back to custom.subcategory (single).
   const listSubs = parseListMetafield(node?.subcategories?.value);
   const singleSub = NORMALIZE_SLUG(node?.subcategory?.value);
-  const subcategorySlugs = listSubs.length
-    ? listSubs
-    : singleSub
-      ? [singleSub]
-      : [];
+  const subcategorySlugs = listSubs.length ? listSubs : singleSub ? [singleSub] : [];
 
   const productTags = Array.isArray(node.tags)
     ? node.tags.map(t => (t || "").toLowerCase().trim().replace(/[\s_]+/g, "-"))
@@ -436,6 +245,18 @@ function toProductShape(node, currentCollectionHandle = "") {
     EXPRESS_COLLECTION_HANDLES.has((currentCollectionHandle || "").toLowerCase()) ||
     collectionHandles.some(h => EXPRESS_COLLECTION_HANDLES.has(h)) ||
     productTags.some(t => READY_TO_SHIP_TAGS.has(t));
+
+  // Extract sizes from variant selectedOptions
+  const sizeSet = new Set();
+  for (const edge of vars) {
+    for (const opt of (edge?.node?.selectedOptions ?? [])) {
+      const optName = (opt.name || "").toLowerCase().replace(/[\s()]/g, "");
+      if (optName.startsWith("size")) {
+        sizeSet.add(opt.value.trim());
+      }
+    }
+  }
+  const sizes = [...sizeSet];
 
   return {
     id: node.id,
@@ -452,11 +273,11 @@ function toProductShape(node, currentCollectionHandle = "") {
     ratingValue: Math.max(0, Math.min(5, Math.round(ratingValue))),
     variantId: firstAvailable?.id || null,
     available: vars.some(v => isAvailable(v.node)),
-    // Legacy single-slug kept for any external consumers.
     subcategorySlug: subcategorySlugs[0] || "",
-    // New: unified array used for all filtering.
     subcategorySlugs,
     isReadyToShip,
+    tags: productTags,
+    sizes,
   };
 }
 
@@ -465,13 +286,390 @@ function parseProductsFromCollection(collectionData, currentCollectionHandle = "
   return edges.map(({ node }) => toProductShape(node, currentCollectionHandle));
 }
 
-const getStoredCartId = () => {
-  try { return localStorage.getItem(CART_ID_KEY) || null; } catch { return null; }
-};
+const getStoredCartId = () => { try { return localStorage.getItem(CART_ID_KEY) || null; } catch { return null; } };
 const setStoredCartId = (id) => { try { localStorage.setItem(CART_ID_KEY, id); } catch { } };
 const clearStoredCartId = () => { try { localStorage.removeItem(CART_ID_KEY); } catch { } };
 
-/* -------------------------------- main ------------------------------- */
+/* ─── DualRangeSlider ────────────────────────────────────────────────────── */
+function DualRangeSlider({ min, max, minValue, maxValue, onChange }) {
+  const safeMin = Math.max(min, Math.min(minValue, maxValue));
+  const safeMax = Math.min(max, Math.max(minValue, maxValue));
+  const range = max - min || 1;
+  const step = range > 20000 ? 1000 : range > 5000 ? 500 : range > 2000 ? 200 : 100;
+  const minPct = ((safeMin - min) / range) * 100;
+  const maxPct = ((safeMax - min) / range) * 100;
+
+  return (
+    <div className="relative h-6 flex items-center mt-2">
+      <div className="absolute left-0 right-0 h-[2px] bg-neutral-200 rounded" />
+      <div
+        className="absolute h-[2px] rounded"
+        style={{ backgroundColor: BRAND, left: `${minPct}%`, right: `${100 - maxPct}%` }}
+      />
+      <input
+        type="range" min={min} max={max} step={step} value={safeMin}
+        onChange={e => onChange([Math.min(Number(e.target.value), safeMax - step), safeMax])}
+        className="absolute w-full h-full opacity-0 cursor-pointer"
+        style={{ zIndex: safeMin > max - range / 4 ? 5 : 3 }}
+      />
+      <input
+        type="range" min={min} max={max} step={step} value={safeMax}
+        onChange={e => onChange([safeMin, Math.max(Number(e.target.value), safeMin + step)])}
+        className="absolute w-full h-full opacity-0 cursor-pointer"
+        style={{ zIndex: safeMin > max - range / 4 ? 3 : 5 }}
+      />
+      <div
+        className="absolute h-4 w-4 rounded-full border-2 border-white shadow pointer-events-none"
+        style={{ backgroundColor: BRAND, left: `${minPct}%`, transform: "translateX(-50%)" }}
+      />
+      <div
+        className="absolute h-4 w-4 rounded-full border-2 border-white shadow pointer-events-none"
+        style={{ backgroundColor: BRAND, left: `${maxPct}%`, transform: "translateX(-50%)" }}
+      />
+    </div>
+  );
+}
+
+/* ─── FilterDrawer ───────────────────────────────────────────────────────── */
+function FilterDrawer({ open, onClose, products, priceRange, availableSizes, initialFilters, onApply }) {
+  const [local, setLocal] = useState(initialFilters);
+
+  useEffect(() => {
+    if (open) setLocal(initialFilters);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const lMin = local.priceMin ?? priceRange.min;
+  const lMax = local.priceMax ?? priceRange.max;
+
+  const clearLocal = () => setLocal({ priceMin: null, priceMax: null, sizes: [], dispatch: [] });
+
+  // Live count for the CTA button
+  const previewCount = useMemo(() => {
+    let arr = products;
+    if (local.priceMin !== null) arr = arr.filter(p => Number(p.price) >= local.priceMin);
+    if (local.priceMax !== null) arr = arr.filter(p => Number(p.price) <= local.priceMax);
+    if (local.sizes.length) arr = arr.filter(p => p.sizes?.some(s => local.sizes.includes(s)));
+    if (local.dispatch.length) {
+      arr = arr.filter(p => {
+        if (local.dispatch.includes("ready") && p.isReadyToShip) return true;
+        if (local.dispatch.includes("made") && !p.isReadyToShip) return true;
+        return false;
+      });
+    }
+    return arr.length;
+  }, [products, local]);
+
+  const hasLocalFilters =
+    local.priceMin !== null ||
+    local.priceMax !== null ||
+    local.sizes.length > 0 ||
+    local.dispatch.length > 0;
+
+  return (
+    <Sheet open={open} onOpenChange={v => !v && onClose()}>
+      <SheetContent
+        side="left"
+        className="w-[300px] sm:w-[360px] p-0 flex flex-col bg-white border-r border-neutral-100 overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100">
+          <span className="text-[11px] uppercase tracking-[0.2em] montserrat-600 text-primary">
+            Filter
+          </span>
+          {hasLocalFilters && (
+            <button
+              onClick={clearLocal}
+              className="text-[10px] uppercase tracking-[0.12em] montserrat-500 text-neutral-400 hover:text-primary transition-colors"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+
+        {/* Scrollable sections */}
+        <div className="flex-1 overflow-y-auto">
+          <Accordion type="multiple" defaultValue={["price", "size", "dispatch"]} className="divide-y divide-neutral-100">
+
+            {/* Price */}
+            <AccordionItem value="price" className="border-0">
+              <AccordionTrigger className="px-6 py-4 text-[11px] uppercase tracking-[0.18em] montserrat-600 text-primary hover:no-underline hover:bg-neutral-50/50">
+                Price
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-5">
+                <DualRangeSlider
+                  min={priceRange.min}
+                  max={priceRange.max}
+                  minValue={lMin}
+                  maxValue={lMax}
+                  onChange={([mn, mx]) => setLocal(f => ({ ...f, priceMin: mn, priceMax: mx }))}
+                />
+                <div className="flex justify-between mt-4 text-[12px] montserrat-600 text-primary">
+                  <span>₹{lMin.toLocaleString("en-IN")}</span>
+                  <span>₹{lMax.toLocaleString("en-IN")}</span>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Size */}
+            {availableSizes.length > 0 && (
+              <AccordionItem value="size" className="border-0">
+                <AccordionTrigger className="px-6 py-4 text-[11px] uppercase tracking-[0.18em] montserrat-600 text-primary hover:no-underline hover:bg-neutral-50/50">
+                  Size
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-5">
+                  <div className="flex flex-wrap gap-2">
+                    {availableSizes.map(size => {
+                      const active = local.sizes.includes(size);
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => setLocal(f => ({
+                            ...f,
+                            sizes: active ? f.sizes.filter(s => s !== size) : [...f.sizes, size],
+                          }))}
+                          className={`px-3.5 py-2 text-[11px] uppercase tracking-[0.08em] montserrat-500 border transition-all ${
+                            active
+                              ? "border-[#642c44] bg-[#642c44] text-white"
+                              : "border-neutral-200 text-neutral-600 hover:border-[#642c44] hover:text-[#642c44]"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )}
+
+            {/* Dispatch */}
+            <AccordionItem value="dispatch" className="border-0">
+              <AccordionTrigger className="px-6 py-4 text-[11px] uppercase tracking-[0.18em] montserrat-600 text-primary hover:no-underline hover:bg-neutral-50/50">
+                Dispatch
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-5">
+                <div className="flex flex-col gap-2.5">
+                  {[
+                    { value: "ready", label: "Ready to Ship", desc: "Available for quicker dispatch" },
+                    { value: "made", label: "Made for You", desc: "Crafted after you order" },
+                  ].map(opt => {
+                    const active = local.dispatch.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setLocal(f => ({
+                          ...f,
+                          dispatch: active
+                            ? f.dispatch.filter(d => d !== opt.value)
+                            : [...f.dispatch, opt.value],
+                        }))}
+                        className={`flex items-start gap-3 p-3.5 border text-left transition-all ${
+                          active
+                            ? "border-[#642c44] bg-[#642c44]/[0.04]"
+                            : "border-neutral-200 hover:border-neutral-400"
+                        }`}
+                      >
+                        <div
+                          className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border-[1.5px] flex items-center justify-center transition-colors ${
+                            active ? "border-[#642c44] bg-[#642c44]" : "border-neutral-300"
+                          }`}
+                        >
+                          {active && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        </div>
+                        <div>
+                          <p className={`text-[11px] uppercase tracking-[0.1em] montserrat-600 ${active ? "text-[#642c44]" : "text-neutral-700"}`}>
+                            {opt.label}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 montserrat-500 mt-0.5 normal-case tracking-normal leading-snug">
+                            {opt.desc}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+          </Accordion>
+        </div>
+
+        {/* Sticky CTA */}
+        <div className="shrink-0 px-6 py-5 border-t border-neutral-100">
+          <button
+            onClick={() => onApply(local)}
+            className="w-full py-4 text-white text-[11px] uppercase tracking-[0.2em] montserrat-600 transition-colors"
+            style={{ backgroundColor: BRAND }}
+          >
+            Show {previewCount} {previewCount === 1 ? "Style" : "Styles"}
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ─── Sort option rows (shared) ─────────────────────────────────────────── */
+function SortOptionList({ sort, onSortChange, onClose }) {
+  return SORT_OPTIONS.map(opt => (
+    <button
+      key={opt.value}
+      onClick={() => { onSortChange(opt.value); onClose?.(); }}
+      className={`w-full flex items-center justify-between py-3 text-[11px] border-b border-neutral-50 last:border-0 montserrat-500 uppercase tracking-[0.1em] transition-colors text-left ${
+        sort === opt.value ? "text-primary" : "text-neutral-400 hover:text-neutral-700"
+      }`}
+    >
+      {opt.label}
+      {sort === opt.value && <Check className="h-3 w-3 text-primary shrink-0" />}
+    </button>
+  ));
+}
+
+/* ─── Desktop sort popover ───────────────────────────────────────────────── */
+function DesktopSortPopover({ sort, onSortChange }) {
+  const activeSortLabel = SORT_OPTIONS.find(o => o.value === sort)?.label || "Featured";
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-1 text-[11px] uppercase tracking-[0.18em] montserrat-600 text-primary hover:opacity-70 transition-opacity">
+          {activeSortLabel}
+          <ChevronDown className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-52 p-0 bg-white border border-neutral-100 shadow-sm rounded-none"
+      >
+        <div className="px-4 py-1">
+          <SortOptionList sort={sort} onSortChange={onSortChange} />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/* ─── Mobile sort sheet ──────────────────────────────────────────────────── */
+function MobileSortSheet({ open, onClose, sort, onSortChange }) {
+  return (
+    <Sheet open={open} onOpenChange={v => !v && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-xl p-0 overflow-hidden bg-white">
+        <div className="px-5 pt-5 pb-1">
+          <p className="text-[10px] uppercase tracking-[0.2em] montserrat-600 text-neutral-400">Sort By</p>
+        </div>
+        <div className="px-5 pb-8">
+          <SortOptionList sort={sort} onSortChange={onSortChange} onClose={onClose} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ─── CategoryTabs ───────────────────────────────────────────────────────── */
+function CategoryTabs({ items }) {
+  const scrollRef = useRef(null);
+  const buttonRefs = useRef({});
+  const [showRight, setShowRight] = useState(false);
+
+  const updateFade = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateFade();
+    el.addEventListener("scroll", updateFade, { passive: true });
+    const ro = new ResizeObserver(updateFade);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", updateFade); ro.disconnect(); };
+  }, [updateFade]);
+
+  useEffect(() => {
+    const activeItem = items.find(i => i.isActive);
+    if (activeItem) {
+      buttonRefs.current[activeItem.key]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [items]);
+
+  if (!items || items.length === 0) return null;
+
+  return (
+    <div className="relative border-b border-neutral-200">
+      {showRight && (
+        <div className="absolute right-0 top-0 bottom-0 w-10 z-10 pointer-events-none"
+          style={{ background: "linear-gradient(to left, rgba(255,255,255,1) 0%, rgba(255,255,255,0) 100%)" }}
+        />
+      )}
+      <div
+        ref={scrollRef}
+        className="flex items-end overflow-x-auto"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {items.map(({ key, label, isActive, onClick }) => (
+          <button
+            key={key}
+            ref={el => { buttonRefs.current[key] = el; }}
+            type="button"
+            onClick={onClick}
+            className="relative shrink-0 px-4 py-3 text-[10px] sm:text-[11px] uppercase tracking-[0.15em] montserrat-500 transition-colors whitespace-nowrap"
+            style={{ color: isActive ? BRAND : "#9ca3af" }}
+          >
+            {label}
+            {isActive && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ backgroundColor: BRAND }} />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── FilterChips ────────────────────────────────────────────────────────── */
+function FilterChips({ filters, priceRange, onRemovePrice, onRemoveSize, onRemoveDispatch, onClear }) {
+  const chips = [];
+  if (filters.priceMin !== null || filters.priceMax !== null) {
+    const mn = filters.priceMin ?? priceRange.min;
+    const mx = filters.priceMax ?? priceRange.max;
+    chips.push({ id: "price", label: `₹${mn.toLocaleString("en-IN")} – ₹${mx.toLocaleString("en-IN")}`, onRemove: onRemovePrice });
+  }
+  filters.sizes.forEach(s => chips.push({ id: `size-${s}`, label: s, onRemove: () => onRemoveSize(s) }));
+  filters.dispatch.forEach(d => chips.push({
+    id: `dispatch-${d}`,
+    label: d === "ready" ? "Ready to Ship" : "Made for You",
+    onRemove: () => onRemoveDispatch(d),
+  }));
+
+  if (!chips.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 py-3">
+      {chips.map(chip => (
+        <button
+          key={chip.id}
+          onClick={chip.onRemove}
+          className="flex items-center gap-1.5 pl-3 pr-2 py-1.5 border border-neutral-200 text-[10px] uppercase tracking-[0.1em] montserrat-500 text-neutral-600 hover:border-[#642c44] hover:text-[#642c44] transition-colors"
+        >
+          {chip.label}
+          <X className="h-2.5 w-2.5" />
+        </button>
+      ))}
+      {chips.length > 1 && (
+        <button
+          onClick={onClear}
+          className="text-[10px] uppercase tracking-[0.1em] montserrat-500 text-neutral-400 hover:text-[#642c44] transition-colors underline underline-offset-2"
+        >
+          Clear all
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function CollectionPage({ handle: handleProp, params, initialData } = {}) {
   const routerParams = useParams();
   const { handle: paramsHandle } = params || {};
@@ -483,16 +681,12 @@ export default function CollectionPage({ handle: handleProp, params, initialData
   const qParam = searchParams.get("q");
   const isSearchMode = !!qParam && !handle;
 
-  // True when the server passed a pre-fetched collection payload
   const hasServerData = !!initialData?.collection;
-  // Ref tracks whether we've consumed the server data on the initial mount;
-  // after that, every sort/handle change triggers a normal client fetch.
   const serverDataUsedRef = useRef(false);
 
   const [loading, setLoading] = useState(!hasServerData);
   const [title, setTitle] = useState(() => initialData?.collection?.title || "");
   const [description, setDescription] = useState(() => initialData?.collection?.description || "");
-  const [bannerImage, setBannerImage] = useState(() => initialData?.collection?.image?.url || "");
   const [bannerDesktop, setBannerDesktop] = useState(() => initialData?.collection?.desktopBanner?.reference?.image?.url || "");
   const [bannerMobile, setBannerMobile] = useState(() => initialData?.collection?.mobileBanner?.reference?.image?.url || "");
   const [rawProducts, setRawProducts] = useState(() =>
@@ -502,11 +696,9 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     hasServerData ? normalizeLooks(initialData?.collection) : []
   );
   const [error, setError] = useState("");
-
   const [navConfig, setNavConfig] = useState(() =>
     hasServerData ? parseNavConfig(initialData.collection) : null
   );
-
   const [hasNextPage, setHasNextPage] = useState(() =>
     initialData?.collection?.products?.pageInfo?.hasNextPage || false
   );
@@ -514,56 +706,56 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     initialData?.collection?.products?.pageInfo?.endCursor || null
   );
   const [fetchingMore, setFetchingMore] = useState(false);
-
-  const [sort, setSort] = useState("date-desc");
-  // changed: split Add and Buy busy states
-  const [addBusy, setAddBusy] = useState({});   // { [productId]: boolean | "added" }
-  const [buying, setBuying] = useState({});     // { [productId]: boolean }
-
-  // 1 or 2 columns on mobile
+  const [addBusy, setAddBusy] = useState({});
+  const [buying, setBuying] = useState({});
   const [columnsMobile, setColumnsMobile] = useState(2);
-
-  // we no longer use manual pagination pages
-  // const [currentPage, setCurrentPage] = useState(1);
-
-  // GoKwik SDK state (optional, useful for debugging)
   const [gokwikReady, setGokwikReady] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
 
-  // Scroll direction for sticky subcategory strip
-  const [showHeader, setShowHeader] = useState(true);
-  const [lastY, setLastY] = useState(0);
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y > lastY && y > 50) setShowHeader(false);
-      else setShowHeader(true);
-      setLastY(y);
-    };
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [lastY]);
+  // Sort from URL
+  const sortParam = searchParams.get("sort") || "featured";
+  const sort = SORT_OPTIONS.some(o => o.value === sortParam) ? sortParam : "featured";
 
-  // read persisted mobile layout
+  const setSort = useCallback((val) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (val === "featured") newParams.delete("sort");
+    else newParams.set("sort", val);
+    router.push(`${pathname}?${newParams.toString()}`);
+  }, [searchParams, pathname, router]);
+
+  // Active filters from URL
+  const priceMinParam = searchParams.get("price_min");
+  const priceMaxParam = searchParams.get("price_max");
+  const sizesParam = searchParams.get("sizes");
+  const dispatchParam = searchParams.get("dispatch");
+
+  const activeFilters = useMemo(() => ({
+    priceMin: priceMinParam ? Number(priceMinParam) : null,
+    priceMax: priceMaxParam ? Number(priceMaxParam) : null,
+    sizes: sizesParam ? sizesParam.split(",").filter(Boolean) : [],
+    dispatch: dispatchParam ? dispatchParam.split(",").filter(Boolean) : [],
+  }), [priceMinParam, priceMaxParam, sizesParam, dispatchParam]);
+
+  const hasActiveFilters = activeFilters.priceMin !== null || activeFilters.priceMax !== null ||
+    activeFilters.sizes.length > 0 || activeFilters.dispatch.length > 0;
+
+  /* ── Persist mobile columns ── */
   useEffect(() => {
     try {
       const val = Number(localStorage.getItem(MOBILE_COLS_KEY));
       if (val === 1 || val === 2) setColumnsMobile(val);
     } catch { }
   }, []);
-  // persist on change
   useEffect(() => {
     try { localStorage.setItem(MOBILE_COLS_KEY, String(columnsMobile)); } catch { }
   }, [columnsMobile]);
 
-  // load products (collection or search mode)
+  /* ── Data fetch ── */
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // On initial mount, skip client fetch — state is already hydrated from server data.
-      // Exception: Sale/Offer collections still need to run so the augmentation query
-      // merges best-selling discounted products into the initial list.
-      const isOfferHandle =
-        !isSearchMode && OFFER_COLLECTION_HANDLES.has((handle || "").toLowerCase());
+      const isOfferHandle = !isSearchMode && OFFER_COLLECTION_HANDLES.has((handle || "").toLowerCase());
       if (!isSearchMode && hasServerData && !serverDataUsedRef.current && !isOfferHandle) {
         serverDataUsedRef.current = true;
         return;
@@ -581,50 +773,29 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           if (cancelled) return;
           const prods = (data?.products?.edges ?? []).map(({ node }) => toProductShape(node));
           const pageInfo = data?.products?.pageInfo;
-
-          setTitle(`Search results for “${qParam}”`);
+          setTitle(`Search results for "${qParam}"`);
           setDescription("");
-          setBannerImage("");
           setBannerDesktop("");
           setBannerMobile("");
           setRawProducts(prods);
           setHasNextPage(pageInfo?.hasNextPage || false);
           setEndCursor(pageInfo?.endCursor || null);
         } else {
-          // Fetch only the first batch (Lazy Load)
           const collectionArgs = getCollectionSortArgs(sort);
-          const data = await shopify(GET_COLLECTION_BY_HANDLE, {
-            handle,
-            first: 20,
-            after: null,
-            ...collectionArgs,
-          });
+          const data = await shopify(GET_COLLECTION_BY_HANDLE, { handle, first: 20, after: null, ...collectionArgs });
           if (cancelled) return;
-
           const col = data?.collection;
-          if (!col) {
-            setTitle("");
-            setRawProducts([]);
-            return;
-          }
-
-          const featured = col.image?.url || "";
+          if (!col) { setTitle(""); setRawProducts([]); return; }
           const desktop = col.desktopBanner?.reference?.image?.url || "";
           const mobile = col.mobileBanner?.reference?.image?.url || "";
-
           setTitle(col.title || "");
           setDescription(col.description || "");
-          setBannerImage(featured);
           setBannerDesktop(desktop);
           setBannerMobile(mobile);
-
           setNavConfig(parseNavConfig(col));
           setLooks(normalizeLooks(col));
-
           let pageProducts = parseProductsFromCollection(col, handle);
           const pageInfo = col.products?.pageInfo;
-
-          // Augment Sale/Offer collection with best-selling discounted products
           if (OFFER_COLLECTION_HANDLES.has((handle || "").toLowerCase())) {
             try {
               const augData = await shopify(GET_SALE_AUGMENT, { first: 250 });
@@ -643,11 +814,8 @@ export default function CollectionPage({ handle: handleProp, params, initialData
                 .map(n => toProductShape(n, handle))
                 .filter(p => !existingIds.has(p.id));
               pageProducts = [...pageProducts, ...augProducts];
-            } catch {
-              // if augmentation fails, keep the base collection products
-            }
+            } catch { }
           }
-
           setRawProducts(pageProducts);
           setHasNextPage(pageInfo?.hasNextPage || false);
           setEndCursor(pageInfo?.endCursor || null);
@@ -660,40 +828,77 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     })();
     return () => { cancelled = true; };
   }, [handle, isSearchMode, qParam, sort]);
-  const subParamRaw = !isSearchMode
-    ? searchParams.get("sub")
-    : null;
+
+  /* ── Subcategory state ── */
+  const subParamRaw = !isSearchMode ? searchParams.get("sub") : null;
   const activeSubSlug = !isSearchMode ? NORMALIZE_SLUG(subParamRaw) : null;
+  const isFilterSubcategoryMode = !isSearchMode && navConfig?.mode === "filter_subcategory";
+  const subcategorySlugs = useMemo(() => deriveSubcategorySlugs(rawProducts, navConfig), [rawProducts, navConfig]);
 
-  const isFilterSubcategoryMode =
-    !isSearchMode && navConfig?.mode === "filter_subcategory";
+  /* ── Price range from all loaded products ── */
+  const priceRange = useMemo(() => {
+    const prices = rawProducts.map(p => Number(p.price)).filter(n => Number.isFinite(n) && n > 0);
+    if (!prices.length) return { min: 0, max: 10000 };
+    return { min: Math.floor(Math.min(...prices) / 100) * 100, max: Math.ceil(Math.max(...prices) / 100) * 100 };
+  }, [rawProducts]);
 
-  const subcategorySlugs = useMemo(
-    () => deriveSubcategorySlugs(rawProducts, navConfig),
-    [rawProducts, navConfig]
-  );
+  /* ── Available sizes from all loaded products ── */
+  const availableSizes = useMemo(() => {
+    const set = new Set();
+    rawProducts.forEach(p => p.sizes?.forEach(s => set.add(s)));
+    return SIZE_ORDER.filter(s => set.has(s));
+  }, [rawProducts]);
 
-  // Server-side sort is applied in the fetch. Only client-side subcategory filter remains.
-  const products = useMemo(() => {
-    let arr = rawProducts;
-
-    if (isFilterSubcategoryMode && activeSubSlug) {
-      if (subcategorySlugs.length === 0) {
-        arr = [];
-      } else if (subcategorySlugs.includes(activeSubSlug)) {
-        arr = arr.filter(
-          (p) =>
-            Array.isArray(p?.subcategorySlugs) &&
-            p.subcategorySlugs.includes(activeSubSlug)
-        );
-      } else {
-        arr = [];
-      }
-    }
-
-    return arr;
+  /* ── Subcategory pre-filtered (base for drawer preview) ── */
+  const subcategoryProducts = useMemo(() => {
+    if (!isFilterSubcategoryMode || !activeSubSlug) return rawProducts;
+    if (!subcategorySlugs.includes(activeSubSlug)) return [];
+    return rawProducts.filter(p => Array.isArray(p?.subcategorySlugs) && p.subcategorySlugs.includes(activeSubSlug));
   }, [rawProducts, isFilterSubcategoryMode, activeSubSlug, subcategorySlugs]);
 
+  /* ── Fully filtered products (shown in grid) ── */
+  const products = useMemo(() => {
+    let arr = subcategoryProducts;
+    if (activeFilters.priceMin !== null) arr = arr.filter(p => Number(p.price) >= activeFilters.priceMin);
+    if (activeFilters.priceMax !== null) arr = arr.filter(p => Number(p.price) <= activeFilters.priceMax);
+    if (activeFilters.sizes.length) arr = arr.filter(p => p.sizes?.some(s => activeFilters.sizes.includes(s)));
+    if (activeFilters.dispatch.length) {
+      arr = arr.filter(p => {
+        if (activeFilters.dispatch.includes("ready") && p.isReadyToShip) return true;
+        if (activeFilters.dispatch.includes("made") && !p.isReadyToShip) return true;
+        return false;
+      });
+    }
+    return arr;
+  }, [subcategoryProducts, activeFilters]);
+
+  /* ── Nav items ── */
+  const navItems = useMemo(() => {
+    if (isSearchMode || !navConfig) return [];
+    const items = [];
+    if (navConfig.mode === "filter_subcategory" && subcategorySlugs.length > 0) {
+      if (navConfig.showAllTab) {
+        items.push({ key: "__all__", label: "All", isActive: !activeSubSlug, onClick: () => handleSubcategoryClick(null) });
+      }
+      subcategorySlugs.forEach(slug => {
+        items.push({ key: slug, label: slugToLabel(slug), isActive: activeSubSlug === slug, onClick: () => handleSubcategoryClick(slug) });
+      });
+    } else if (navConfig.mode === "child_collections" && Array.isArray(navConfig.childCollections) && navConfig.childCollections.length > 0) {
+      if (navConfig.showAllTab) {
+        items.push({
+          key: "__all__", label: "All", isActive: false,
+          onClick: () => { router.push(`/collections/${handle}`); window.scrollTo({ top: 0, behavior: "smooth" }); },
+        });
+      }
+      navConfig.childCollections.forEach(col => {
+        items.push({ key: col.id, label: col.title, isActive: false, onClick: () => handleChildCollectionClick(col.handle) });
+      });
+    }
+    return items;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSearchMode, navConfig, subcategorySlugs, activeSubSlug]);
+
+  /* ── Load more ── */
   const handleLoadMore = useCallback(async () => {
     if (!hasNextPage || !endCursor || fetchingMore) return;
     setFetchingMore(true);
@@ -715,8 +920,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           const pageInfo = col.products?.pageInfo;
           setRawProducts(prev => {
             const existingIds = new Set(prev.map(p => p.id));
-            const fresh = prods.filter(p => !existingIds.has(p.id));
-            return [...prev, ...fresh];
+            return [...prev, ...prods.filter(p => !existingIds.has(p.id))];
           });
           setHasNextPage(pageInfo?.hasNextPage || false);
           setEndCursor(pageInfo?.endCursor || null);
@@ -729,56 +933,75 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     }
   }, [hasNextPage, endCursor, fetchingMore, isSearchMode, qParam, handle, sort]);
 
-  // Infinite scroll intersection observer
   const observerTarget = useRef(null);
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !fetchingMore) {
-          handleLoadMore();
-        }
-      },
+      (entries) => { if (entries[0].isIntersecting && hasNextPage && !fetchingMore) handleLoadMore(); },
       { threshold: 1.0, rootMargin: "200px" }
     );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
+    if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
   }, [hasNextPage, fetchingMore, handleLoadMore]);
 
-  // products memo – since it's infinite scroll, we show the full accumulated array
-  // (we no longer slice by currentPage)
-  const pagedProducts = products;
+  /* ── Subcategory navigation ── */
+  const handleSubcategoryClick = useCallback((slug) => {
+    if (isSearchMode) return;
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (!slug) newParams.delete("sub");
+    else newParams.set("sub", NORMALIZE_SLUG(slug));
+    const search = newParams.toString();
+    router.push(`${pathname}${search ? `?${search}` : ""}`);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [isSearchMode, pathname, searchParams, router]);
 
-  const handleSubcategoryClick = useCallback(
-    (slug) => {
-      if (isSearchMode) return;
-      const newParams = new URLSearchParams(searchParams.toString());
-      if (!slug) {
-        newParams.delete("sub");
-      } else {
-        newParams.set("sub", NORMALIZE_SLUG(slug));
-      }
-      const search = newParams.toString();
-      router.push(`${pathname}${search ? `?${search}` : ""}`);
-      // Scroll to the top of the collection to restart browsing smoothly
-      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    [isSearchMode, pathname, searchParams, router]
-  );
+  const handleChildCollectionClick = useCallback((childHandle) => {
+    if (!childHandle) return;
+    router.push(`/collections/${childHandle}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [router]);
 
-  const handleChildCollectionClick = useCallback(
-    (childHandle) => {
-      if (!childHandle) return;
-      router.push(`/collections/${childHandle}`);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    },
-    [router]
-  );
+  /* ── Filter helpers ── */
+  const applyFilters = useCallback((filters) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (filters.priceMin !== null && filters.priceMin !== priceRange.min)
+      newParams.set("price_min", String(filters.priceMin));
+    else newParams.delete("price_min");
+    if (filters.priceMax !== null && filters.priceMax !== priceRange.max)
+      newParams.set("price_max", String(filters.priceMax));
+    else newParams.delete("price_max");
+    if (filters.sizes.length) newParams.set("sizes", filters.sizes.join(","));
+    else newParams.delete("sizes");
+    if (filters.dispatch.length) newParams.set("dispatch", filters.dispatch.join(","));
+    else newParams.delete("dispatch");
+    router.push(`${pathname}?${newParams.toString()}`);
+    setFilterOpen(false);
+  }, [searchParams, pathname, router, priceRange]);
 
-  // cart helpers
+  const clearAllFilters = useCallback(() => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    newParams.delete("price_min");
+    newParams.delete("price_max");
+    newParams.delete("sizes");
+    newParams.delete("dispatch");
+    router.push(`${pathname}?${newParams.toString()}`);
+  }, [searchParams, pathname, router]);
+
+  const removeFilter = useCallback((type, value) => {
+    const newParams = new URLSearchParams(searchParams.toString());
+    if (type === "price") { newParams.delete("price_min"); newParams.delete("price_max"); }
+    else if (type === "size") {
+      const cur = newParams.get("sizes")?.split(",").filter(s => s !== value) ?? [];
+      if (cur.length) newParams.set("sizes", cur.join(","));
+      else newParams.delete("sizes");
+    } else if (type === "dispatch") {
+      const cur = newParams.get("dispatch")?.split(",").filter(d => d !== value) ?? [];
+      if (cur.length) newParams.set("dispatch", cur.join(","));
+      else newParams.delete("dispatch");
+    }
+    router.push(`${pathname}?${newParams.toString()}`);
+  }, [searchParams, pathname, router]);
+
+  /* ── Cart helpers ── */
   const ensureCartId = useCallback(async () => {
     let id = getStoredCartId();
     if (id) return id;
@@ -791,276 +1014,163 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     return id;
   }, []);
 
-  const handleLookQuickAdd = useCallback(
-    async (product) => {
-      const isSingleVariant = product.variants?.length <= 1;
-      if (!isSingleVariant) {
-        openQuickBuy({
-          handle: product.handle,
-          title: product.title,
-          price: product.priceRange?.minVariantPrice?.amount,
-          imageUrl: product.imageUrl,
-        });
-        return;
-      }
-
-      const variantId = product.variants[0]?.id;
-      if (!variantId) {
-        router.push(`/products/${product.handle}`);
-        return;
-      }
-
-      setAddBusy((s) => ({ ...s, [product.id]: true }));
-      try {
-        const cartId = await ensureCartId();
-        const res = await shopify(CART_LINES_ADD, {
-          cartId,
-          lines: [{ merchandiseId: variantId, quantity: 1 }],
-        });
-        const errs = res?.cartLinesAdd?.userErrors;
-        if (errs?.length) throw new Error(errs.map((e) => e.message).join('; '));
-        const cartData = res?.cartLinesAdd?.cart;
-        window.dispatchEvent(
-          new CustomEvent('cart:updated', { detail: { totalQuantity: cartData?.totalQuantity ?? 0 } })
-        );
-        window.dispatchEvent(new CustomEvent('cart:item-added'));
-        trackAddToCart({
-          productGid: product.id,
-          variantGid: variantId,
-          productTitle: product.title,
-          price: product.priceRange?.minVariantPrice?.amount ?? '0',
-          cartId: cartData?.id ?? cartId ?? '',
-          quantity: 1,
-        });
-        setAddBusy((s) => ({ ...s, [product.id]: 'added' }));
-        setTimeout(() => setAddBusy((s) => ({ ...s, [product.id]: false })), 1200);
-      } catch (e) {
-        alert(e?.message || 'Could not add to cart.');
-        setAddBusy((s) => ({ ...s, [product.id]: false }));
-      }
-    },
-    [ensureCartId, openQuickBuy, router]
-  );
-
-  /* ------------------------ GoKwik: init SDK once ------------------------ */
-  useEffect(() => {
-    if (!GOKWIK_ENABLED || !GOKWIK_MID) {
-      setGokwikReady(false);
+  const handleLookQuickAdd = useCallback(async (product) => {
+    const isSingleVariant = product.variants?.length <= 1;
+    if (!isSingleVariant) {
+      openQuickBuy({ handle: product.handle, title: product.title, price: product.priceRange?.minVariantPrice?.amount, imageUrl: product.imageUrl });
       return;
     }
+    const variantId = product.variants[0]?.id;
+    if (!variantId) { router.push(`/products/${product.handle}`); return; }
+    setAddBusy((s) => ({ ...s, [product.id]: true }));
+    try {
+      const cartId = await ensureCartId();
+      const res = await shopify(CART_LINES_ADD, { cartId, lines: [{ merchandiseId: variantId, quantity: 1 }] });
+      const errs = res?.cartLinesAdd?.userErrors;
+      if (errs?.length) throw new Error(errs.map((e) => e.message).join('; '));
+      const cartData = res?.cartLinesAdd?.cart;
+      window.dispatchEvent(new CustomEvent('cart:updated', { detail: { totalQuantity: cartData?.totalQuantity ?? 0 } }));
+      window.dispatchEvent(new CustomEvent('cart:item-added'));
+      trackAddToCart({ productGid: product.id, variantGid: variantId, productTitle: product.title, price: product.priceRange?.minVariantPrice?.amount ?? '0', cartId: cartData?.id ?? cartId ?? '', quantity: 1 });
+      setAddBusy((s) => ({ ...s, [product.id]: 'added' }));
+      setTimeout(() => setAddBusy((s) => ({ ...s, [product.id]: false })), 1200);
+    } catch (e) {
+      alert(e?.message || 'Could not add to cart.');
+      setAddBusy((s) => ({ ...s, [product.id]: false }));
+    }
+  }, [ensureCartId, openQuickBuy, router]);
 
-    // Define merchantInfo BEFORE loading SDK. Include both keys (mid & merchantId).
+  /* ── GoKwik init ── */
+  useEffect(() => {
+    if (!GOKWIK_ENABLED || !GOKWIK_MID) { setGokwikReady(false); return; }
     window.merchantInfo = {
       ...(window.merchantInfo || {}),
-      mid: GOKWIK_MID,
-      merchantId: GOKWIK_MID,
-      environment: GOKWIK_ENV, // "production" or "uat"
-      type: "merchantInfo",
+      mid: GOKWIK_MID, merchantId: GOKWIK_MID, environment: GOKWIK_ENV, type: "merchantInfo",
       ...(GOKWIK_STORE_ID ? { storeId: GOKWIK_STORE_ID } : {}),
       ...(GOKWIK_FB_PIXEL ? { fbPixel: GOKWIK_FB_PIXEL } : {}),
     };
-
     if (!document.getElementById("gokwik-sdk")) {
       const s = document.createElement("script");
-      s.id = "gokwik-sdk";
-      s.async = true;
+      s.id = "gokwik-sdk"; s.async = true;
       s.src = "https://pdp.gokwik.co/merchant-integration/build/merchant.integration.js?v4";
       s.onload = () => {
-        try {
-          if (window.gokwikSdk?.init) window.gokwikSdk.init();
-        } catch { }
+        try { if (window.gokwikSdk?.init) window.gokwikSdk.init(); } catch { }
         setGokwikReady(Boolean(window.triggerGokwikCustomCheckout || window.gokwikSdk));
-
-        // Helper to attach cart and then trigger modal
         window.triggerGokwikCheckout = function triggerGokwikCheckout(cartId) {
           window.merchantInfo = {
             ...(window.merchantInfo || {}),
-            mid: GOKWIK_MID,
-            merchantId: GOKWIK_MID,
-            environment: GOKWIK_ENV,
-            type: "merchantInfo",
+            mid: GOKWIK_MID, merchantId: GOKWIK_MID, environment: GOKWIK_ENV, type: "merchantInfo",
             ...(GOKWIK_STORE_ID ? { storeId: GOKWIK_STORE_ID } : {}),
             ...(GOKWIK_FB_PIXEL ? { fbPixel: GOKWIK_FB_PIXEL } : {}),
             cart: { id: cartId },
           };
-          if (typeof window.triggerGokwikCustomCheckout === "function") {
-            window.triggerGokwikCustomCheckout();
-          }
+          if (typeof window.triggerGokwikCustomCheckout === "function") window.triggerGokwikCustomCheckout();
         };
       };
-      s.onerror = () => {
-        setGokwikReady(false);
-      };
+      s.onerror = () => setGokwikReady(false);
       document.body.appendChild(s);
     } else {
       setGokwikReady(Boolean(window.triggerGokwikCustomCheckout || window.gokwikSdk));
     }
-
   }, []);
 
-  const triggerGokwikOrFallback = useCallback(
-    async (cartId, maybeCheckoutUrl) => {
-      releaseFocusForCheckout();
-      if (GOKWIK_ENABLED && GOKWIK_MID && typeof window.triggerGokwikCheckout === "function") {
-        try {
-          window.triggerGokwikCheckout(cartId);
-          return;
-        } catch {
-          // fall through to native checkout
-        }
-      }
+  const triggerGokwikOrFallback = useCallback(async (cartId, maybeCheckoutUrl) => {
+    releaseFocusForCheckout();
+    if (GOKWIK_ENABLED && GOKWIK_MID && typeof window.triggerGokwikCheckout === "function") {
+      try { window.triggerGokwikCheckout(cartId); return; } catch { }
+    }
+    if (maybeCheckoutUrl) { window.open(maybeCheckoutUrl, "_blank", "noopener,noreferrer"); return; }
+    try {
+      const data = await shopify(CART_QUERY, { cartId });
+      const url = data?.cart?.checkoutUrl;
+      window.open(url || "/cart", "_blank", "noopener,noreferrer");
+    } catch { window.open("/cart", "_blank", "noopener,noreferrer"); }
+  }, []);
 
-      if (maybeCheckoutUrl) {
-        window.open(maybeCheckoutUrl, "_blank", "noopener,noreferrer");
-        return;
-      }
-      try {
-        const data = await shopify(CART_QUERY, { cartId });
-        const url = data?.cart?.checkoutUrl;
-        window.open(url || "/cart", "_blank", "noopener,noreferrer");
-      } catch {
-        window.open("/cart", "_blank", "noopener,noreferrer");
-      }
-    },
-    []
-  );
-
-  const handleAddToCart = useCallback(
-    async (product) => {
-      // If multiple variants, open Quick Buy
-      if (product.variants?.edges?.length > 1) {
-        openQuickBuy({
-          handle: product.handle,
-          title: product.title,
-          price: product.priceRange?.minVariantPrice?.amount,
-          imageUrl: product.images?.edges[0]?.node?.url,
-        });
-        return;
-      }
-
-      setAddBusy((s) => ({ ...s, [product.id]: true }));
-      try {
-        const variantId = product.variants?.edges[0]?.node?.id;
-        if (!variantId) {
-          router.push(`/products/${product.handle}`);
-          return;
-        }
-
-        const cartId = await ensureCartId();
-        const res = await shopify(CART_LINES_ADD, {
-          cartId,
-          lines: [{ merchandiseId: variantId, quantity: 1 }],
-        });
-        const errs = res?.cartLinesAdd?.userErrors;
-        if (errs?.length) throw new Error(errs.map((e) => e.message).join("; "));
-
-        const cartData = res?.cartLinesAdd?.cart;
-        const total = cartData?.totalQuantity ?? 0;
-        try {
-          window.dispatchEvent(
-            new CustomEvent("cart:updated", { detail: { totalQuantity: total } })
-          );
-          window.dispatchEvent(new CustomEvent("cart:item-added"));
-        } catch { }
-
-        trackAddToCart({
-          productGid: product.id,
-          variantGid: variantId,
-          productTitle: product.title,
-          price: product.priceRange?.minVariantPrice?.amount ?? '0',
-          cartId: cartData?.id ?? cartId ?? '',
-          quantity: 1,
-        });
-
-        setAddBusy((s) => ({ ...s, [product.id]: "added" }));
-        setTimeout(() => {
-          setAddBusy((s) => ({ ...s, [product.id]: false }));
-        }, 1200);
-      } catch (e) {
-        alert(e?.message || "Could not add to cart.");
-        setAddBusy((s) => ({ ...s, [product.id]: false }));
-      }
-    },
-    [ensureCartId, router, openQuickBuy]
-  );
-
-  const handleBuyNow = useCallback(
-    async (product) => {
-      // If multiple variants, open Quick Buy
-      if (product.variants?.edges?.length > 1) {
-        openQuickBuy({
-          handle: product.handle,
-          title: product.title,
-          price: product.priceRange?.minVariantPrice?.amount,
-          imageUrl: product.images?.edges[0]?.node?.url,
-        });
-        return;
-      }
-
+  const handleAddToCart = useCallback(async (product) => {
+    if (product.variants?.edges?.length > 1) {
+      openQuickBuy({ handle: product.handle, title: product.title, price: product.priceRange?.minVariantPrice?.amount, imageUrl: product.images?.edges[0]?.node?.url });
+      return;
+    }
+    setAddBusy((s) => ({ ...s, [product.id]: true }));
+    try {
       const variantId = product.variants?.edges[0]?.node?.id;
-      if (!variantId) {
-        router.push(`/products/${product.handle}`);
+      if (!variantId) { router.push(`/products/${product.handle}`); return; }
+      const cartId = await ensureCartId();
+      const res = await shopify(CART_LINES_ADD, { cartId, lines: [{ merchandiseId: variantId, quantity: 1 }] });
+      const errs = res?.cartLinesAdd?.userErrors;
+      if (errs?.length) throw new Error(errs.map((e) => e.message).join("; "));
+      const cartData = res?.cartLinesAdd?.cart;
+      try {
+        window.dispatchEvent(new CustomEvent("cart:updated", { detail: { totalQuantity: cartData?.totalQuantity ?? 0 } }));
+        window.dispatchEvent(new CustomEvent("cart:item-added"));
+      } catch { }
+      trackAddToCart({ productGid: product.id, variantGid: variantId, productTitle: product.title, price: product.priceRange?.minVariantPrice?.amount ?? '0', cartId: cartData?.id ?? cartId ?? '', quantity: 1 });
+      setAddBusy((s) => ({ ...s, [product.id]: "added" }));
+      setTimeout(() => setAddBusy((s) => ({ ...s, [product.id]: false })), 1200);
+    } catch (e) {
+      alert(e?.message || "Could not add to cart.");
+      setAddBusy((s) => ({ ...s, [product.id]: false }));
+    }
+  }, [ensureCartId, router, openQuickBuy]);
+
+  const handleBuyNow = useCallback(async (product) => {
+    if (product.variants?.edges?.length > 1) {
+      openQuickBuy({ handle: product.handle, title: product.title, price: product.priceRange?.minVariantPrice?.amount, imageUrl: product.images?.edges[0]?.node?.url });
+      return;
+    }
+    const variantId = product.variants?.edges[0]?.node?.id;
+    if (!variantId) { router.push(`/products/${product.handle}`); return; }
+    setBuying((s) => ({ ...s, [product.id]: true }));
+    try {
+      let storedCartId = getStoredCartId();
+      if (!storedCartId) {
+        const res = await shopify(CART_CREATE, { lines: [{ merchandiseId: variantId, quantity: 1 }] });
+        const errs = res?.cartCreate?.userErrors;
+        if (errs?.length) throw new Error(errs.map((e) => e.message).join("; "));
+        const newCart = res?.cartCreate?.cart;
+        if (newCart?.id) setStoredCartId(newCart.id);
+        await triggerGokwikOrFallback(newCart?.id, newCart?.checkoutUrl);
         return;
       }
-
-      setBuying((s) => ({ ...s, [product.id]: true }));
       try {
-        let storedCartId = getStoredCartId();
-
-        if (!storedCartId) {
-          const res = await shopify(CART_CREATE, {
-            lines: [{ merchandiseId: variantId, quantity: 1 }],
-          });
-          const errs = res?.cartCreate?.userErrors;
-          if (errs?.length) throw new Error(errs.map((e) => e.message).join("; "));
-          const newCart = res?.cartCreate?.cart;
-          if (newCart?.id) setStoredCartId(newCart.id);
-          await triggerGokwikOrFallback(newCart?.id, newCart?.checkoutUrl);
-          return;
-        }
-
-        try {
-          const res2 = await shopify(CART_LINES_ADD, {
-            cartId: storedCartId,
-            lines: [{ merchandiseId: variantId, quantity: 1 }],
-          });
-          const errs2 = res2?.cartLinesAdd?.userErrors;
-          if (errs2?.length) throw new Error(errs2.map((e) => e.message).join("; "));
-          const checkoutUrl = res2?.cartLinesAdd?.cart?.checkoutUrl;
-          await triggerGokwikOrFallback(storedCartId, checkoutUrl);
-          return;
-        } catch (innerErr) {
-          clearStoredCartId();
-          const createAgain = await shopify(CART_CREATE, {
-            lines: [{ merchandiseId: variantId, quantity: 1 }],
-          });
-          const errs3 = createAgain?.cartCreate?.userErrors;
-          if (errs3?.length) throw new Error(errs3.map((e) => e.message).join("; "));
-          const created = createAgain?.cartCreate?.cart;
-          if (created?.id) setStoredCartId(created.id);
-          await triggerGokwikOrFallback(created?.id, created?.checkoutUrl);
-          return;
-        }
-      } catch (e) {
-        console.error("Buy Now error:", e);
-        alert(e?.message || "Could not proceed to checkout.");
-      } finally {
-        setBuying((s) => ({ ...s, [product.id]: false }));
+        const res2 = await shopify(CART_LINES_ADD, { cartId: storedCartId, lines: [{ merchandiseId: variantId, quantity: 1 }] });
+        const errs2 = res2?.cartLinesAdd?.userErrors;
+        if (errs2?.length) throw new Error(errs2.map((e) => e.message).join("; "));
+        await triggerGokwikOrFallback(storedCartId, res2?.cartLinesAdd?.cart?.checkoutUrl);
+        return;
+      } catch {
+        clearStoredCartId();
+        const createAgain = await shopify(CART_CREATE, { lines: [{ merchandiseId: variantId, quantity: 1 }] });
+        const errs3 = createAgain?.cartCreate?.userErrors;
+        if (errs3?.length) throw new Error(errs3.map((e) => e.message).join("; "));
+        const created = createAgain?.cartCreate?.cart;
+        if (created?.id) setStoredCartId(created.id);
+        await triggerGokwikOrFallback(created?.id, created?.checkoutUrl);
       }
-    },
-    [triggerGokwikOrFallback, router, openQuickBuy]
-  );
+    } catch (e) {
+      console.error("Buy Now error:", e);
+      alert(e?.message || "Could not proceed to checkout.");
+    } finally {
+      setBuying((s) => ({ ...s, [product.id]: false }));
+    }
+  }, [triggerGokwikOrFallback, router, openQuickBuy]);
 
-  /* ----------------------------- render ----------------------------- */
+  /* ── Active sort label ── */
+  const activeSortLabel = SORT_OPTIONS.find(o => o.value === sort)?.label || "Featured";
+
+  /* ── Render ── */
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10 py-10">
-        <Skeleton className="h-64 w-full mb-8" />
-        <div className="flex items-end justify-between mb-6">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-10 w-36" />
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10 py-10">
+        <Skeleton className="h-4 w-48 mb-4" />
+        <Skeleton className="h-10 w-72 mb-2" />
+        <Skeleton className="h-4 w-80 mb-8" />
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-9 w-36" />
         </div>
-        <Separator />
+        <div className="h-px bg-neutral-200" />
       </div>
     );
   }
@@ -1086,202 +1196,162 @@ export default function CollectionPage({ handle: handleProp, params, initialData
 
   const effectiveDesktopBanner = bannerDesktop;
   const effectiveMobileBanner = bannerMobile || effectiveDesktopBanner;
-
   return (
-    <div className="mx-auto max-w-full px-0 md:px-0 py-0">
-      {/* Banner (skip for search mode) */}
+    <div className="mx-auto max-w-full px-0 py-0">
+
+      {/* Banner */}
       {!isSearchMode && effectiveDesktopBanner && (
         <div className="relative w-full">
           <picture>
-            {/* Mobile first */}
-            <source
-              media="(max-width: 768px)"
-              srcSet={effectiveMobileBanner}
-            />
-            {/* Desktop / default */}
-            <img
-              src={effectiveDesktopBanner}
-              alt={title}
-              className="w-full h-auto object-cover object-top"
-              loading="lazy"
-              decoding="async"
-            />
+            <source media="(max-width: 768px)" srcSet={effectiveMobileBanner} />
+            <img src={effectiveDesktopBanner} alt={title} className="w-full h-auto object-cover object-top" loading="lazy" decoding="async" />
           </picture>
-
-          {/* <div className="absolute inset-0 flex flex-col bg-black/30 justify-center items-center text-center px-6">
-            <h1 className="cormorant-garamond-700 uppercase text-3xl md:text-4xl lg:text-4xl text-accent drop-shadow-lg">
-              {title}
-            </h1>
-            {description && (
-              <p className="mt-3 max-w-3xl text-sm md:text-base text-gray-100">
-                {description}
-              </p>
-            )}
-          </div> */}
         </div>
       )}
 
-      {/* ===== Features (controls) ===== */}
-      <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10 pt-10 pb-2 md:pt-12">
-        <h1 className="cormorant-garamond-700 uppercase text-primary text-3xl md:text-4xl lg:text-4xl text-center sm:text-start">
-          {title}
-        </h1>
+      {/* ── Editorial Collection Header ── */}
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10">
 
-        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-neutral-500 text-center sm:text-left">
-            {products.length} item{products.length === 1 ? "" : "s"}
+        {/* Title + count */}
+        <div className="pt-6 sm:pt-10 pb-3 sm:pb-4">
+          <h1 className="cormorant-garamond-700 text-[28px] sm:text-[36px] lg:text-[44px] leading-tight text-primary uppercase">
+            {title}
+          </h1>
+        </div>
+
+        {!isSearchMode && description && (
+          <p className="text-[11px] sm:text-[12px] text-neutral-400 leading-snug max-w-xl montserrat-500 mb-3">
+            {description}
           </p>
+        )}
 
-          {/* Right-side controls group */}
-          <div className="flex items-center justify-center sm:justify-end gap-3">
-            {/* Sort (always visible) */}
-            <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="w-44 h-10">
-                <SelectValue placeholder="Featured" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="date-desc">Newest First</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="title-asc">Title: A–Z</SelectItem>
-                <SelectItem value="title-desc">Title: Z–A</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* Category tabs */}
+        {navItems.length > 0 && (
+          <div className="mt-1">
+            <CategoryTabs items={navItems} />
+          </div>
+        )}
 
-            {/* View dropdown — MOBILE ONLY (icon only in trigger to avoid duplication) */}
-            <div className="block sm:hidden">
-              <Select
-                value={String(columnsMobile)}
-                onValueChange={(v) => setColumnsMobile(Number(v))}
-              >
-                <SelectTrigger className="w-44 h-10 pl-9 relative">
-                  {/* current icon in trigger */}
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">
-                    {columnsMobile === 1 ? (
-                      <Rows2 className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Columns2 className="h-4 w-4 text-primary" />
-                    )}
-                  </span>
-                  {/* Only text comes from SelectValue so there is no second icon */}
-                  <SelectValue
-                    placeholder="View"
-                    aria-label={`View: ${columnsMobile} per row`}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Text-only items to prevent icon duplication in the trigger */}
-                  <SelectItem value="1">List View</SelectItem>
-                  <SelectItem value="2">Grid View</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* Divider (when no tabs, sits directly under title) */}
+        {navItems.length === 0 && (
+          <div className="h-px bg-neutral-200 mt-1" />
+        )}
+
+        {/* FILTER | SORT BY row */}
+        <div className="flex items-center justify-between py-3.5">
+          <button
+            onClick={() => setFilterOpen(true)}
+            className="flex items-center gap-2 text-[10px] sm:text-[11px] uppercase tracking-[0.18em] montserrat-600 text-primary hover:opacity-70 transition-opacity"
+          >
+            <SlidersHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" strokeWidth={1.5} />
+            Filter
+            {hasActiveFilters && (
+              <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: BRAND }} />
+            )}
+          </button>
+
+          <div className="flex items-center gap-3">
+            {/* Mobile column toggle */}
+            <button
+              onClick={() => setColumnsMobile(c => c === 1 ? 2 : 1)}
+              className="sm:hidden p-1 text-neutral-400 hover:text-primary transition-colors"
+              aria-label={columnsMobile === 1 ? "Switch to grid view" : "Switch to single column"}
+            >
+              {columnsMobile === 1 ? <Columns2 className="h-3.5 w-3.5" /> : <Rows2 className="h-3.5 w-3.5" />}
+            </button>
+
+            {/* Mobile: tap to open bottom sheet */}
+            <button
+              onClick={() => setSortOpen(true)}
+              className="sm:hidden flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] montserrat-600 text-primary hover:opacity-70 transition-opacity"
+            >
+              {sort !== "featured" ? activeSortLabel : "Sort By"}
+              <ChevronDown className="h-3 w-3 shrink-0" strokeWidth={1.5} />
+            </button>
+
+            {/* Desktop: popover dropdown */}
+            <div className="hidden sm:block">
+              <DesktopSortPopover sort={sort} onSortChange={setSort} />
             </div>
           </div>
         </div>
 
-        {/* We moved the subcategory strip out to be a sibling so it can stick properly */}
-        {(!navConfig || isSearchMode) && <Separator className="mt-4" />}
+        {/* Divider */}
+        <div className="h-px bg-neutral-200" />
+
+        {/* Active filter chips */}
+        {hasActiveFilters && (
+          <FilterChips
+            filters={activeFilters}
+            priceRange={priceRange}
+            onRemovePrice={() => removeFilter("price")}
+            onRemoveSize={s => removeFilter("size", s)}
+            onRemoveDispatch={d => removeFilter("dispatch", d)}
+            onClear={clearAllFilters}
+          />
+        )}
       </div>
-      {/* ===== /Features ===== */}
 
-      {/* Subcategory / child collection strip (Sticky) */}
-      {!isSearchMode && navConfig && (() => {
-        // Build a unified items list for the two strip variants
-        let items = [];
+      {/* Sidebars */}
+      <FilterDrawer
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        products={subcategoryProducts}
+        priceRange={priceRange}
+        availableSizes={availableSizes}
+        initialFilters={activeFilters}
+        onApply={applyFilters}
+      />
+      <MobileSortSheet
+        open={sortOpen}
+        onClose={() => setSortOpen(false)}
+        sort={sort}
+        onSortChange={setSort}
+      />
 
-        if (navConfig.mode === "filter_subcategory" && subcategorySlugs.length > 0) {
-          if (navConfig.showAllTab) {
-            items.push({
-              key: "__all__",
-              label: "View All",
-              isActive: !activeSubSlug,
-              onClick: () => handleSubcategoryClick(null),
-            });
-          }
-          subcategorySlugs.forEach((slug) => {
-            items.push({
-              key: slug,
-              label: slugToLabel(slug),
-              isActive: activeSubSlug === slug,
-              onClick: () => handleSubcategoryClick(slug),
-            });
-          });
-        } else if (
-          navConfig.mode === "child_collections" &&
-          Array.isArray(navConfig.childCollections) &&
-          navConfig.childCollections.length > 0
-        ) {
-          if (navConfig.showAllTab) {
-            items.push({
-              key: "__all__",
-              label: "View All",
-              isActive: false,
-              onClick: () => { router.push(`/collections/${handle}`); window.scrollTo({ top: 0, behavior: "smooth" }); },
-            });
-          }
-          navConfig.childCollections.forEach((col) => {
-            items.push({
-              key: col.id,
-              label: col.title,
-              isActive: false,
-              onClick: () => handleChildCollectionClick(col.handle),
-            });
-          });
-        }
-
-        if (items.length === 0) return null;
-        const activeKey = items.find((i) => i.isActive)?.key ?? null;
-
-        return (
-          <div
-            className={`bg-white/95 backdrop-blur-md z-40 transition-transform duration-300 sm:static sticky ${showHeader ? "top-[76px] sm:top-[80px]" : "top-0"
-              }`}
-          >
-            <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10 pt-3">
-              {/* Mobile strip */}
-              <SubcategoryStrip items={items} activeKey={activeKey} />
-              {/* Desktop strip */}
-              <SubcategoryStripDesktop items={items} />
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Looks view — replaces product grid when collection has looks */}
+      {/* Looks or standard product grid */}
       {!isSearchMode && looks.length > 0 ? (
         <React.Suspense fallback={null}>
           <LookCollection looks={looks} onQuickAdd={handleLookQuickAdd} />
         </React.Suspense>
       ) : (
-        /* Standard product grid */
         <div className="mx-auto max-w-[1440px] px-3 sm:px-6 lg:px-10">
           {products.length === 0 ? (
-            <div className="py-20 text-center text-neutral-600">
-              {isSearchMode
-                ? "No products matched your search."
-                : isFilterSubcategoryMode && activeSubSlug
-                  ? "No products in this subcategory."
-                  : "No products in this collection."}
+            <div className="py-24 text-center text-neutral-400">
+              <p className="text-[12px] uppercase tracking-[0.12em] montserrat-500">
+                {isSearchMode
+                  ? "No products matched your search."
+                  : hasActiveFilters
+                    ? "No products match the selected filters."
+                    : isFilterSubcategoryMode && activeSubSlug
+                      ? "No products in this subcategory."
+                      : "No products in this collection."}
+              </p>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="mt-4 text-[11px] uppercase tracking-[0.12em] montserrat-500 underline underline-offset-4 text-primary hover:opacity-70 transition-opacity"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
             <div
-              className={`mt-6 grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
-                } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
+              className={`mt-4 sm:mt-6 grid gap-3 md:gap-4 ${
+                columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+              } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
             >
-              {pagedProducts.map((product, index) => {
+              {products.map((product, index) => {
                 const addState = addBusy[product.id];
-                const isAddBusy = addState === true;
-                const justAdded = addState === "added";
-
                 return (
                   <ProductCard
                     key={product.id}
                     product={product}
                     eager={index < 4}
                     onAddToCart={handleAddToCart}
-                    isAddBusy={isAddBusy}
-                    justAdded={justAdded}
+                    isAddBusy={addState === true}
+                    justAdded={addState === "added"}
                     showWishlistButton
                   />
                 );
@@ -1289,12 +1359,12 @@ export default function CollectionPage({ handle: handleProp, params, initialData
             </div>
           )}
 
-          {/* Trigger for Infinite Scroll / Skeleton Loading */}
           <div ref={observerTarget} className="w-full pb-20">
             {fetchingMore && (
               <div
-                className={`grid gap-3 md:gap-4 ${columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
-                  } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
+                className={`grid gap-3 md:gap-4 ${
+                  columnsMobile === 1 ? "grid-cols-1" : "grid-cols-2"
+                } sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`}
               >
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="flex flex-col gap-3">
@@ -1314,12 +1384,9 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         </div>
       )}
 
-      {/* Additional sections */}
-      {
-        COLLECTION_TAIL_SECTIONS.map(({ key, ...sectionProps }) => (
-          <LazySection key={key} {...sectionProps} />
-        ))
-      }
-    </div >
+      {COLLECTION_TAIL_SECTIONS.map(({ key, ...sectionProps }) => (
+        <LazySection key={key} {...sectionProps} />
+      ))}
+    </div>
   );
 }

@@ -145,16 +145,16 @@ export default function ProductCard({
               onClick={handleWishlistToggle}
               aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
               aria-pressed={wishlisted}
-              className={`absolute right-1.5 top-1.5 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/8 bg-white/80 text-[#2d2d2d] shadow-[0_4px_12px_rgba(0,0,0,0.05)] backdrop-blur-[2px] transition-all duration-200 hover:scale-[1.04] hover:border-primary/20 hover:bg-white/90 md:right-2 md:top-2 md:h-8 md:w-8 ${
+              className={`absolute right-1.5 top-1.5 z-20 inline-flex h-6 w-6 items-center justify-center rounded-full border border-black/5 bg-white/60 text-[#2d2d2d] shadow-[0_2px_6px_rgba(0,0,0,0.06)] backdrop-blur-[2px] transition-all duration-200 hover:bg-white/80 md:right-2 md:top-2 md:h-6 md:w-6 ${
                 wishlisted
                   ? "md:opacity-100 md:pointer-events-auto"
                   : "md:pointer-events-none md:opacity-0 md:group-hover/card:pointer-events-auto md:group-hover/card:opacity-100 md:group-focus-within/card:pointer-events-auto md:group-focus-within/card:opacity-100"
               }`}
             >
               <Heart
-                size={15}
-                strokeWidth={1.8}
-                style={wishlisted ? { color: BRAND, fill: BRAND } : { color: "#2d2d2d", fill: "none" }}
+                size={12}
+                strokeWidth={1.5}
+                style={wishlisted ? { color: BRAND, fill: BRAND } : { color: "#6b6b6b", fill: "none" }}
               />
             </button>
           )}

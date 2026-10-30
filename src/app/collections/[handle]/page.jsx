@@ -94,8 +94,6 @@ export default async function Page({ params }) {
   const { handle } = await params;
   const c = await getCollection(handle);
 
-  if (!c) notFound();
-
   // Fetch the first batch of products server-side so CollectionPage renders
   // with real data immediately — no client-side loading spinner on first visit.
   // Default sort matches the client's initial sort state ("date-desc" → CREATED desc).

@@ -671,12 +671,13 @@ export const GET_COLLECTION_BY_HANDLE = /* GraphQL */ `
             collections(first: 10) { edges { node { handle } } }
             images(first: 2) { edges { node { url altText } } }
             priceRange { minVariantPrice { amount currencyCode } }
-            variants(first: 10) {
+            variants(first: 20) {
               edges {
                 node {
                   id
                   availableForSale
                   quantityAvailable
+                  selectedOptions { name value }
                   price { amount currencyCode }
                   compareAtPrice { amount currencyCode }
                 }

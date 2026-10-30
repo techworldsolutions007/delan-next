@@ -147,13 +147,15 @@ const SITE_BRAND_NAME = "DELAN"; // used ONLY when Shopify seo.title is empty
 const ADD_TO_BAG_TRUST_BADGES = [
   { icon: Return, label: "7 Days Return / Exchanges" },
   { icon: Secure, label: "Secure Payments" },
-  { icon: Cod, label: "Partial COD Accepted" },
+  { icon: Cod, label: "COD Accepted" },
   { icon: Delivery, label: "Delivers Across India" },
 ];
 
 /* -------------------------------------------------------------------------- */
 /*                               GoKwik Helpers                               */
 /* -------------------------------------------------------------------------- */
+
+
 const normalizeGokwikEnv = (raw) => {
   const v = (raw || "").toLowerCase();
   if (["prod", "production", "live"].includes(v)) return "production";
@@ -1192,20 +1194,20 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
 
 
 
-        <div className="grid grid-cols-1 gap-10 lg:gap-14 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid grid-cols-1 gap-4 lg:gap-14 lg:grid-cols-[1.1fr_0.9fr]">
           {/* LEFT: Image gallery */}
           <div
-            className="md:pl-2 min-w-0 overflow-hidden lg:sticky lg:self-start flex flex-col-reverse md:flex-row gap-4"
+            className="md:pl-2 min-w-0 overflow-hidden lg:sticky lg:self-start flex flex-col-reverse md:flex-row gap-3"
             style={!isSmallViewport ? { top: 'var(--pdp-sticky-top, 156px)', transition: 'top 0.3s ease' } : undefined}
           >
             {/* Thumbnails Track */}
             {galleryImages.length > 0 && (
               <div
-                className="relative shrink-0 w-full md:w-[76px]"
+                className="relative shrink-0 w-full md:w-[64px]"
               >
                 <div
                   ref={thumbTrackRef}
-                  className="flex flex-row md:flex-col gap-3 overflow-x-auto md:overflow-y-auto no-scrollbar py-1 md:py-2 px-1 md:px-0 select-none cursor-grab active:cursor-grabbing w-full"
+                  className="flex flex-row md:flex-col gap-[10px] overflow-x-auto md:overflow-y-auto no-scrollbar py-0 md:py-0 px-0 md:px-0 select-none cursor-grab active:cursor-grabbing w-full"
                   style={{
                     maxHeight: isSmallViewport ? "none" : "min(75vh, 650px)",
                     scrollBehavior: "smooth"
@@ -1223,9 +1225,9 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                       aria-pressed={activeImg === i}
                       className={[
                         "relative inline-flex flex-none items-center justify-center",
-                        "w-[68px] md:w-full aspect-[3/4] rounded-sm overflow-hidden border transition-all duration-300",
+                        "w-[64px] md:w-full aspect-[3/4] rounded-[8px] overflow-hidden border-[1.5px] transition-all duration-200",
                         activeImg === i
-                          ? "z-10 shadow-sm"
+                          ? "z-10"
                           : "border-transparent",
                       ].join(" ")}
                       style={{
@@ -1734,7 +1736,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                       className="mb-2 h-10 w-10 object-contain brightness-0 sm:h-11 sm:w-11"
                       draggable="false"
                     />
-                    <span className="max-w-none whitespace-nowrap text-[9px] font-medium leading-tight text-black sm:text-[11px]">
+                    <span className="max-w-none whitespace-nowrap text-[8px] font-medium leading-tight text-black sm:text-[10px]">
                       {badge.label}
                     </span>
                   </li>

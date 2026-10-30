@@ -38,14 +38,14 @@ export default function Marquee({
 
   return (
     <div
-      className="relative w-full overflow-hidden border-b"
+      className="relative w-full overflow-hidden border-b h-[35px] flex items-center"
       style={{ backgroundColor: BRAND }}
       role="region"
       aria-label="Store promotions"
     >
       {/* Group to allow pause-on-hover via Tailwind arbitrary property */}
       <div
-        className={`group mx-auto max-w-[1400px] px-3 py-2 sm:px-6`}
+        className={`group mx-auto max-w-[1400px] px-3 py-0 sm:px-6`}
         style={{ ["--dur"]: `${speed}s`, ["--gap"]: gap }}
       >
         {/* Lane */}
@@ -64,14 +64,14 @@ export default function Marquee({
           {lane.map((item, i) => (
             <Badge
               key={`${item.text}-${i}`}
-              className="whitespace-nowrap text-[15px] sm:text-[16px] text-white font-medium bg-transparent border-0 px-3 py-1 flex items-center gap-2 tracking-[0.025em] uppercase"
+              className="whitespace-nowrap text-[10px] sm:text-[11px] text-white font-medium bg-transparent border-0 px-2 py-0.5 flex items-center gap-1.5 tracking-[0.025em] uppercase"
             >
               <Image
                 src={item.icon}
                 alt=""
-                width={28}
-                height={28}
-                className={item.icon === FreeDeliveryIcon ? "w-8 h-8 sm:w-9 sm:h-9 brightness-0 invert" : "w-6 h-6 sm:w-7 sm:h-7"}
+                width={14}
+                height={14}
+                className={item.icon === FreeDeliveryIcon ? "w-4 h-4 sm:w-5 sm:h-5 brightness-0 invert" : "w-3 h-3 sm:w-3.5 sm:h-3.5"}
               />
               {item.text}
             </Badge>
