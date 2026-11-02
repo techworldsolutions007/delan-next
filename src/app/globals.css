@@ -182,6 +182,9 @@
 }
 
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
   .skeleton {
     @apply relative overflow-hidden bg-neutral-100;
   }
