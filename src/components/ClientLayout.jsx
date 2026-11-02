@@ -15,6 +15,7 @@ import ShopifyCookiesInit from './ShopifyCookiesInit';
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isProductPage = pathname?.startsWith('/products/');
+  const isBlogPage = pathname?.startsWith('/blogs/');
   return (
     <QuickBuyProvider>
       <AuthProvider>
@@ -29,8 +30,8 @@ export default function ClientLayout({ children }) {
           >
             {children}
           </div>
-          {!isProductPage && <Testimonial />}
-          {!isProductPage && <PrBanner />}
+          {!isProductPage && !isBlogPage && <Testimonial />}
+          {!isProductPage && !isBlogPage && <PrBanner />}
           <Footer />
           <WhatsAppButton />
           <QuickBuyDrawer />
