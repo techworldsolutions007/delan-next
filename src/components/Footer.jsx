@@ -61,25 +61,28 @@ export default function Footer() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-10 items-start">
 
-        {/* Customer Care */}
+        {/* Customer Service */}
         <div className="md:col-span-3">
-          <h4 className="text-lg montserrat-600 mb-4 tracking-[0.025em] leading-snug">Customer Care</h4>
+          <h4 className="text-lg montserrat-600 mb-4 tracking-[0.025em] leading-snug">Customer Service</h4>
           <ul className="space-y-2 montserrat-500 tracking-[0.025em] leading-snug">
-            <li><Link href="/contact"          className="hover:text-[#642c44]/60">Contact Us</Link></li>
-            <li><Link href="/track-order"      className="hover:text-[#642c44]/60">Track Order</Link></li>
-            <li><Link href="/returns-exchange" className="hover:text-[#642c44]/60">Returns &amp; Exchange</Link></li>
+            <li><Link href="/contact"          className="hover:text-[#642c44]/60">Contact</Link></li>
+            <li><Link href="/returns-exchange" className="hover:text-[#642c44]/60">Return/Exchange</Link></li>
+            <li><Link href="/privacy-policy"   className="hover:text-[#642c44]/60">Privacy Policy</Link></li>
+            <li><Link href="/shipping-policy"  className="hover:text-[#642c44]/60">Shipping Policy</Link></li>
+            <li><Link href="/fabric-care"      className="hover:text-[#642c44]/60">Fabric Care</Link></li>
+            <li><Link href="/terms-conditions" className="hover:text-[#642c44]/60">Terms &amp; Conditions</Link></li>
             <li><Link href="/faq"              className="hover:text-[#642c44]/60">FAQ</Link></li>
           </ul>
         </div>
 
-        {/* Policies + Secure Payment */}
+        {/* Company + Secure Payment */}
         <div className="md:col-span-3">
-          <h4 className="text-lg montserrat-600 mb-4 tracking-[0.025em] leading-snug">Policies</h4>
+          <h4 className="text-lg montserrat-600 mb-4 tracking-[0.025em] leading-snug">Company</h4>
           <ul className="space-y-2 montserrat-500 mb-6 tracking-[0.025em] leading-snug">
-            <li><Link href="/shipping-policy"  className="hover:text-[#642c44]/60">Shipping Policy</Link></li>
-            <li><Link href="/privacy-policy"   className="hover:text-[#642c44]/60">Privacy Policy</Link></li>
-            <li><Link href="/terms-conditions" className="hover:text-[#642c44]/60">Terms &amp; Conditions</Link></li>
-            <li><Link href="/fabric-care"      className="hover:text-[#642c44]/60">Fabric Care</Link></li>
+            <li><Link href="/why-delan"           className="hover:text-[#642c44]/60">Why Delan</Link></li>
+            <li><Link href="/about-us"            className="hover:text-[#642c44]/60">About Us</Link></li>
+            <li><Link href="/affiliate-marketing" className="hover:text-[#642c44]/60">Affiliate Marketing</Link></li>
+            <li><Link href="/blogs/news"          className="hover:text-[#642c44]/60">Blog</Link></li>
           </ul>
 
           <h5 className="text-lg montserrat-600 mb-2 tracking-[0.025em] leading-snug">Secure Payment</h5>
@@ -91,17 +94,10 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Company + Follow Us + Address */}
+        {/* Follow Us + Address */}
         <div className="md:col-span-3">
-          <h4 className="text-lg montserrat-600 mb-4 tracking-[0.025em] leading-snug">Company</h4>
-          <ul className="space-y-2 montserrat-500 mb-6 tracking-[0.025em] leading-snug">
-            <li><Link href="/why-delan"  className="hover:text-[#642c44]/60">Why Delan</Link></li>
-            <li><Link href="/about-us"   className="hover:text-[#642c44]/60">About Us</Link></li>
-            <li><Link href="/blogs/news" className="hover:text-[#642c44]/60">Blog</Link></li>
-          </ul>
-
-          <h5 className="text-lg montserrat-600 mb-3 tracking-[0.025em] leading-snug">Follow Us</h5>
-          <div className="flex space-x-4 text-2xl mb-5">
+          <h4 className="text-lg montserrat-600 mb-3 tracking-[0.025em] leading-snug">Follow Us</h4>
+          <div className="flex space-x-4 text-2xl mb-6">
             <a href="https://www.instagram.com/delan.in/"          target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-pink-500"><FaInstagram /></a>
             <a href="https://www.facebook.com/delanonlinestore"    target="_blank" rel="noopener noreferrer" aria-label="Facebook"  className="hover:text-blue-600"><FaFacebook /></a>
             <a href="https://www.pinterest.com/delanfashion"       target="_blank" rel="noopener noreferrer" aria-label="Pinterest" className="hover:text-red-600"><FaPinterest /></a>
@@ -110,7 +106,8 @@ export default function Footer() {
           <address className="not-italic text-sm leading-relaxed montserrat-500 tracking-[0.025em]">
             <span className="block text-lg montserrat-600 mb-2 tracking-[0.025em] leading-snug">Office Address</span>
             Shop No. 3, Sco-17,<br />
-            HUDA Staff Colony, Sector 16, Faridabad, Haryana 121002
+            HUDA Staff Colony, Sector 16,<br />
+            Faridabad, Haryana 121002
           </address>
         </div>
 

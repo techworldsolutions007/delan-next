@@ -47,14 +47,14 @@ export default function VideoSection() {
     }, [isIOS]);
 
     return (
-        <section className="bg-white px-3 sm:px-6 lg:px-10 pt-10 md:pt-14">
+        <section className="bg-white pt-10 md:pt-14">
             <SectionHeader
                 title="Behind The Scenes"
                 subtitle="The Art of Creating Elegance"
-                className="mb-6 md:mb-8"
+                className="mb-6 md:mb-8 px-3 sm:px-6 lg:px-10"
             />
 
-            <div className="relative w-full overflow-hidden bg-neutral-100 h-[60vh] md:h-[70vh] lg:h-[80vh] rounded-2xl mx-auto max-w-7xl">
+            <div className="relative w-full overflow-hidden bg-neutral-100 h-[60vh] md:h-[70vh] lg:h-[80vh]">
                 <video
                     ref={videoRef}
                     className="absolute inset-0 h-full w-full object-cover object-center"
