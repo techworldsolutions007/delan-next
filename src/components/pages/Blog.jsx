@@ -353,12 +353,12 @@ const Blog = ({ blogHandle: blogHandleProp, params: propParams } = {}) => {
       </div>
 
       {/* ── Discover DELAN ── */}
-      <div className="border-t border-[#e8e0dc] bg-[#faf8f7]">
+      <div className="border-t border-[#e8e0dc] bg-white">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-14 md:py-16 text-center">
-          <h2 className="cormorant-garamond-600 text-primary text-[28px] md:text-[32px] leading-[1.2] mb-3">
+          <h2 className="cormorant-garamond-700 text-primary text-[28px] md:text-[32px] leading-[1.15] tracking-[0.02em] mb-3">
             Discover the World of DELAN
           </h2>
-          <p className="montserrat-400 text-neutral-500 text-[13px] leading-relaxed mb-6 max-w-lg mx-auto">
+          <p className="montserrat-500 text-primary/70 text-[13px] md:text-[14px] leading-snug tracking-[0.025em] mb-7 max-w-lg mx-auto">
             Every piece we create begins with intention — explore our collections, the people behind them, and the values that shape everything we make.
           </p>
           <Link
