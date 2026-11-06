@@ -16,6 +16,11 @@ export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isProductPage = pathname?.startsWith('/products/');
   const isBlogPage = pathname?.startsWith('/blogs/');
+  // Testimonial ("Worn & Loved") only makes sense on shopping/discovery pages
+  const showTestimonial =
+    pathname === '/' ||
+    pathname?.startsWith('/collections/') ||
+    pathname?.startsWith('/products/');
   return (
     <QuickBuyProvider>
       <AuthProvider>
@@ -30,7 +35,7 @@ export default function ClientLayout({ children }) {
           >
             {children}
           </div>
-          {!isProductPage && !isBlogPage && <Testimonial />}
+          {showTestimonial && <Testimonial />}
           {!isProductPage && !isBlogPage && <PrBanner />}
           <Footer />
           <WhatsAppButton />

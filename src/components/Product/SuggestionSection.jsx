@@ -1,14 +1,10 @@
 'use client';
-import Link from 'next/link';
-import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { shopify } from "@/lib/shopify";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingBag, Loader2, Check } from "lucide-react";
 import { useQuickBuy } from "@/context/QuickBuyContext";
 import ProductCard from "@/components/Product/ProductCard";
 import {
@@ -21,7 +17,7 @@ import { trackAddToCart } from "@/lib/analytics";
 import { isPreorder } from "@/lib/preorder";
 
 const BRAND = "#642c44";
-const MAX_ITEMS = 4;
+const MAX_ITEMS = 5;
 const CART_ID_KEY = "shopifyCartId";
 
 /* -------------------- Fallback helpers / queries -------------------- */
@@ -265,8 +261,8 @@ export default function SuggestionSection({
       const isCollectionPath =
         typeof window !== "undefined" &&
         window.location &&
-        window.pathname &&
-        window.pathname.includes("/collections/");
+        window.location.pathname &&
+        window.location.pathname.includes("/collections/");
 
       try {
         setLoadingId(true);
@@ -602,28 +598,28 @@ export default function SuggestionSection({
 
   if (loading) {
     return (
-      <section id="suggestions-section" className="bg-white px-[5%] py-6 sm:py-10">
-        <div className="mx-auto max-w-7xl">
+      <section id="suggestions-section" className="bg-white py-6 sm:py-10">
+        <div className="mx-auto max-w-7xl px-[5%]">
           <h2 className="cormorant-garamond-700 text-primary text-3xl md:text-4xl lg:text-4xl mb-5 sm:mb-8 text-center">
             {title}
           </h2>
-          <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 sm:gap-7">
-            {Array.from({ length: MAX_ITEMS }).map((_, i) => (
-              <Card key={i} className={`border-0 shadow-none${i >= 3 ? " block md:hidden xl:block" : ""}`}>
+        </div>
+        <div className="grid grid-cols-[repeat(5,220px)] lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto px-[5%] pb-3 scroll-smooth">
+          {Array.from({ length: MAX_ITEMS }).map((_, i) => (
+            <div key={i} className="min-w-0">
+              <Card className="border-0 shadow-none">
                 <CardContent className="p-0">
                   <AspectRatio ratio={3 / 4} className="rounded-2xl bg-neutral-100">
                     <Skeleton className="h-full w-full rounded-2xl" />
                   </AspectRatio>
-                  <div className="px-1 pt-3 space-y-2 text-center">
-                    <Skeleton className="h-5 w-2/3 mx-auto" />
-                    <Skeleton className="h-4 w-1/3 mx-auto" />
-                    <Skeleton className="h-4 w-20 mx-auto" />
-                    <Skeleton className="h-10 w-36 mx-auto" />
+                  <div className="px-1 pt-3 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/3" />
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </section>
     );
@@ -647,133 +643,36 @@ export default function SuggestionSection({
   if (!productsToShow.length) return null;
 
   return (
-    <section id="suggestions-section" className="bg-white px-[5%] py-6 sm:py-10">
-      <div className="mx-auto max-w-7xl">
+    <section id="suggestions-section" className="bg-white py-6 sm:py-10">
+      <div className="mx-auto max-w-7xl px-[5%]">
         <h2 className="cormorant-garamond-700 uppercase text-primary text-3xl md:text-4xl lg:text-4xl mb-5 sm:mb-8 text-center">
           {title}
         </h2>
+      </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-4 sm:mb-8 sm:grid-cols-2 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(5,220px)] lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto px-[5%] pb-3 scroll-smooth">
           {productsToShow.map((product, index) => {
             const addState = adding[product.id];
             const isAddBusy = addState === true;
             const justAdded = addState === "added";
-            const busyBuy = !!buying[product.id];
 
             return (
-              <div key={product.id} className={index >= 3 ? "block md:hidden xl:block" : ""}>
+              <div key={product.id} className="min-w-0">
                 <ProductCard
                   product={product}
                   eager={index < 2}
                   onAddToCart={handleAddToCart}
                   isAddBusy={isAddBusy}
                   justAdded={justAdded}
-                  showWishlistButton
+                  showWishlistButton={false}
                   showPrice={showPrice}
-                  showBottomAddToCartButton
+                  showBottomAddToCartButton={false}
                   showDesktopHoverQuickAdd={false}
                 />
-                {false && (
-              <Card key={product.id} className="border-0 shadow-none text-center group">
-                <Link href={`/products/${product.handle}`}
-                  aria-label={product.title}
-                  className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                  style={{ ["--tw-ring-color"]: BRAND }}
-                >
-                  <CardContent className="p-0 montserrat-500">
-                    <div className="relative">
-                      <AspectRatio ratio={3 / 4} className="rounded-2xl overflow-hidden bg-rose-50">
-                        <div className="relative h-full w-full transition-transform duration-300">
-                          <Image
-                            src={product.imageUrl}
-                            alt={product.altText}
-                            fill
-                            className="object-cover select-none transition-opacity duration-300 group-hover:opacity-0"
-                            draggable="false"
-                          />
-                          {product.secondImageUrl && (
-                            <Image
-                              src={product.secondImageUrl}
-                              alt={product.secondAltText}
-                              fill
-                              className="object-cover select-none opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                              draggable="false"
-                            />
-                          )}
-                        </div>
-                      </AspectRatio>
-                    </div>
-
-                    <div className="px-1 pt-3 flex flex-col justify-center items-center gap-1.5 montserrat-500">
-                      <h3
-                        className="text-center w-full montserrat-600 text-[1.1rem] text-primary leading-[1.35] truncate"
-                        style={{ height: "calc(1em * 1.35)" }}
-                        title={product.title}
-                      >
-                        {product.title}
-                      </h3>
-
-                      {showPrice && <Price amount={product.price} code={product.currency} />}
-
-                      {product.ratingValue > 0 ? (
-                        <Stars value={product.ratingValue} />
-                      ) : (
-                        <div className="h-5" aria-hidden="true" />
-                      )}
-
-                      {/* BUTTONS */}
-                      <div className="w-full mt-1.5 flex justify-center items-center gap-2 montserrat-500">
-                        <Button
-                          className="border-2 h-10 flex-1 max-w-[160px] sm:max-w-none sm:w-48 px-3 leading-none"
-                          style={{ backgroundColor: BRAND, borderColor: BRAND }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!product.available || busyBuy) return;
-                            handleBuyNow(product);
-                          }}
-                          disabled={!product.available || busyBuy}
-                        >
-                          {busyBuy ? "Buying..." : product.available ? "Buy Now" : "Out of stock"}
-                        </Button>
-
-                        {/* Add to Cart: spinner then checkmark */}
-                        <Button
-                          className="font-secondary font-semibold border-2 h-10 flex items-center justify-center w-10 sm:w-10"
-                          style={{ backgroundColor: BRAND, borderColor: BRAND }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (!product.available || isAddBusy) return;
-                            handleAddToCart(product);
-                          }}
-                          disabled={!product.available || isAddBusy}
-                          aria-live="polite"
-                          aria-busy={isAddBusy}
-                          aria-label={
-                            isAddBusy ? "Adding to cart" : justAdded ? "Added" : "Add to cart"
-                          }
-                          title={justAdded ? "Added!" : "Add to cart"}
-                        >
-                          {isAddBusy ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                          ) : justAdded ? (
-                            <Check className="w-5 h-5" />
-                          ) : (
-                            <ShoppingBag className="w-5 h-5" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
-                )}
               </div>
             );
           })}
         </div>
-      </div>
     </section>
   );
 }

@@ -81,7 +81,6 @@ export default function Footer() {
           <ul className="space-y-2 montserrat-500 mb-6 tracking-[0.025em] leading-snug">
             <li><Link href="/why-delan"           className="hover:text-[#642c44]/60">Why Delan</Link></li>
             <li><Link href="/about-us"            className="hover:text-[#642c44]/60">About Us</Link></li>
-            <li><Link href="/affiliate-marketing" className="hover:text-[#642c44]/60">Affiliate Marketing</Link></li>
             <li><Link href="/blogs/news"          className="hover:text-[#642c44]/60">Blog</Link></li>
           </ul>
 

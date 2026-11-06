@@ -12,7 +12,6 @@ import { Check, X, SlidersHorizontal, Rows2, Columns2, ChevronDown } from "lucid
 import LazySection from "@/components/LazySection";
 import ProductCard from "@/components/Product/ProductCard";
 import { useQuickBuy } from "@/context/QuickBuyContext";
-import { releaseFocusForCheckout } from "@/lib/checkout-helpers";
 import { normalizeLooks } from "@/lib/looks";
 
 import { CART_CREATE, CART_LINES_ADD, GET_COLLECTION_BY_HANDLE, GET_SALE_AUGMENT } from "@/lib/queries";
@@ -33,14 +32,6 @@ const OFFER_COLLECTION_HANDLES = new Set([
   "offer", "offers", "sale", "deals", "on-sale", "sale-products"
 ]);
 
-const CART_QUERY = /* GraphQL */ `
-  query CartQuery($cartId: ID!) {
-    cart(id: $cartId) {
-      id
-      checkoutUrl
-    }
-  }
-`;
 
 const SEARCH_PRODUCTS = `
   query SearchProducts($query: String!, $first: Int!, $after: String, $sortKey: ProductSortKeys, $reverse: Boolean) {
@@ -272,6 +263,7 @@ function toProductShape(node, currentCollectionHandle = "") {
     secondAltText: img2?.altText || img1?.altText || node.title,
     ratingValue: Math.max(0, Math.min(5, Math.round(ratingValue))),
     variantId: firstAvailable?.id || null,
+    variantCount: vars.length,
     available: vars.some(v => isAvailable(v.node)),
     subcategorySlug: subcategorySlugs[0] || "",
     subcategorySlugs,
@@ -707,7 +699,6 @@ export default function CollectionPage({ handle: handleProp, params, initialData
   );
   const [fetchingMore, setFetchingMore] = useState(false);
   const [addBusy, setAddBusy] = useState({});
-  const [buying, setBuying] = useState({});
   const [columnsMobile, setColumnsMobile] = useState(2);
   const [gokwikReady, setGokwikReady] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -1074,28 +1065,15 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     }
   }, []);
 
-  const triggerGokwikOrFallback = useCallback(async (cartId, maybeCheckoutUrl) => {
-    releaseFocusForCheckout();
-    if (GOKWIK_ENABLED && GOKWIK_MID && typeof window.triggerGokwikCheckout === "function") {
-      try { window.triggerGokwikCheckout(cartId); return; } catch { }
-    }
-    if (maybeCheckoutUrl) { window.open(maybeCheckoutUrl, "_blank", "noopener,noreferrer"); return; }
-    try {
-      const data = await shopify(CART_QUERY, { cartId });
-      const url = data?.cart?.checkoutUrl;
-      window.open(url || "/cart", "_blank", "noopener,noreferrer");
-    } catch { window.open("/cart", "_blank", "noopener,noreferrer"); }
-  }, []);
-
   const handleAddToCart = useCallback(async (product) => {
-    if (product.variants?.edges?.length > 1) {
-      openQuickBuy({ handle: product.handle, title: product.title, price: product.priceRange?.minVariantPrice?.amount, imageUrl: product.images?.edges[0]?.node?.url });
+    if (product.variantCount > 1) {
+      openQuickBuy({ handle: product.handle, title: product.title, price: product.price, imageUrl: product.imageUrl });
       return;
     }
+    const variantId = product.variantId;
+    if (!variantId) { router.push(`/products/${product.handle}`); return; }
     setAddBusy((s) => ({ ...s, [product.id]: true }));
     try {
-      const variantId = product.variants?.edges[0]?.node?.id;
-      if (!variantId) { router.push(`/products/${product.handle}`); return; }
       const cartId = await ensureCartId();
       const res = await shopify(CART_LINES_ADD, { cartId, lines: [{ merchandiseId: variantId, quantity: 1 }] });
       const errs = res?.cartLinesAdd?.userErrors;
@@ -1105,7 +1083,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         window.dispatchEvent(new CustomEvent("cart:updated", { detail: { totalQuantity: cartData?.totalQuantity ?? 0 } }));
         window.dispatchEvent(new CustomEvent("cart:item-added"));
       } catch { }
-      trackAddToCart({ productGid: product.id, variantGid: variantId, productTitle: product.title, price: product.priceRange?.minVariantPrice?.amount ?? '0', cartId: cartData?.id ?? cartId ?? '', quantity: 1 });
+      trackAddToCart({ productGid: product.id, variantGid: variantId, productTitle: product.title, price: product.price ?? '0', cartId: cartData?.id ?? cartId ?? '', quantity: 1 });
       setAddBusy((s) => ({ ...s, [product.id]: "added" }));
       setTimeout(() => setAddBusy((s) => ({ ...s, [product.id]: false })), 1200);
     } catch (e) {
@@ -1113,48 +1091,6 @@ export default function CollectionPage({ handle: handleProp, params, initialData
       setAddBusy((s) => ({ ...s, [product.id]: false }));
     }
   }, [ensureCartId, router, openQuickBuy]);
-
-  const handleBuyNow = useCallback(async (product) => {
-    if (product.variants?.edges?.length > 1) {
-      openQuickBuy({ handle: product.handle, title: product.title, price: product.priceRange?.minVariantPrice?.amount, imageUrl: product.images?.edges[0]?.node?.url });
-      return;
-    }
-    const variantId = product.variants?.edges[0]?.node?.id;
-    if (!variantId) { router.push(`/products/${product.handle}`); return; }
-    setBuying((s) => ({ ...s, [product.id]: true }));
-    try {
-      let storedCartId = getStoredCartId();
-      if (!storedCartId) {
-        const res = await shopify(CART_CREATE, { lines: [{ merchandiseId: variantId, quantity: 1 }] });
-        const errs = res?.cartCreate?.userErrors;
-        if (errs?.length) throw new Error(errs.map((e) => e.message).join("; "));
-        const newCart = res?.cartCreate?.cart;
-        if (newCart?.id) setStoredCartId(newCart.id);
-        await triggerGokwikOrFallback(newCart?.id, newCart?.checkoutUrl);
-        return;
-      }
-      try {
-        const res2 = await shopify(CART_LINES_ADD, { cartId: storedCartId, lines: [{ merchandiseId: variantId, quantity: 1 }] });
-        const errs2 = res2?.cartLinesAdd?.userErrors;
-        if (errs2?.length) throw new Error(errs2.map((e) => e.message).join("; "));
-        await triggerGokwikOrFallback(storedCartId, res2?.cartLinesAdd?.cart?.checkoutUrl);
-        return;
-      } catch {
-        clearStoredCartId();
-        const createAgain = await shopify(CART_CREATE, { lines: [{ merchandiseId: variantId, quantity: 1 }] });
-        const errs3 = createAgain?.cartCreate?.userErrors;
-        if (errs3?.length) throw new Error(errs3.map((e) => e.message).join("; "));
-        const created = createAgain?.cartCreate?.cart;
-        if (created?.id) setStoredCartId(created.id);
-        await triggerGokwikOrFallback(created?.id, created?.checkoutUrl);
-      }
-    } catch (e) {
-      console.error("Buy Now error:", e);
-      alert(e?.message || "Could not proceed to checkout.");
-    } finally {
-      setBuying((s) => ({ ...s, [product.id]: false }));
-    }
-  }, [triggerGokwikOrFallback, router, openQuickBuy]);
 
   /* ── Active sort label ── */
   const activeSortLabel = SORT_OPTIONS.find(o => o.value === sort)?.label || "Featured";

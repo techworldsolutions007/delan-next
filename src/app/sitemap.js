@@ -71,7 +71,6 @@ const STATIC_PAGES = [
   { path: '/about-us',            priority: 0.7, changeFrequency: 'monthly' },
   { path: '/why-delan',           priority: 0.7, changeFrequency: 'monthly' },
   { path: '/contact',             priority: 0.7, changeFrequency: 'monthly' },
-  { path: '/affiliate-program',   priority: 0.6, changeFrequency: 'monthly' },
   { path: '/fabric-care',         priority: 0.6, changeFrequency: 'monthly' },
   { path: '/faq',                 priority: 0.6, changeFrequency: 'monthly' },
   { path: '/track-order',         priority: 0.5, changeFrequency: 'monthly' },

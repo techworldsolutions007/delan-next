@@ -352,24 +352,6 @@ const Blog = ({ blogHandle: blogHandleProp, params: propParams } = {}) => {
         )}
       </div>
 
-      {/* ── Discover DELAN ── */}
-      <div className="border-t border-[#e8e0dc] bg-white">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-14 md:py-16 text-center">
-          <h2 className="cormorant-garamond-700 text-primary text-[28px] md:text-[32px] leading-[1.15] tracking-[0.02em] mb-3">
-            Discover the World of DELAN
-          </h2>
-          <p className="montserrat-500 text-primary/70 text-[13px] md:text-[14px] leading-snug tracking-[0.025em] mb-7 max-w-lg mx-auto">
-            Every piece we create begins with intention — explore our collections, the people behind them, and the values that shape everything we make.
-          </p>
-          <Link
-            href="/about-us"
-            className="inline-flex items-center gap-2 montserrat-600 text-[11px] uppercase tracking-[0.16em] text-primary border-b border-primary pb-px transition-opacity hover:opacity-60"
-          >
-            Our Story <ArrowRight className="w-[11px] h-[11px]" />
-          </Link>
-        </div>
-      </div>
-
     </div>
   );
 };

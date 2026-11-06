@@ -13,7 +13,7 @@ export default function LoadingScreen() {
         /* mobile: static, fills ~content area height */
         "min-h-[72vh]",
         /* desktop: full-screen overlay */
-        "md:fixed md:inset-0 md:z-[9999] md:min-h-0",
+        "md:fixed md:inset-0 md:z-[10000] md:min-h-0",
       ].join(" ")}
       style={{ animation: "overlay-fade-in 0.18s ease-out both" }}
     >

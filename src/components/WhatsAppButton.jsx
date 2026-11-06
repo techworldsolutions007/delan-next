@@ -40,7 +40,6 @@ function useWhatsAppMessage() {
       "/terms-conditions": "terms & conditions",
       "/why-delan": "why delan",
       "/fabric-care": "fabric care",
-      "/affiliate-program": "affiliate program",
       "/search": "search",
     };
 
