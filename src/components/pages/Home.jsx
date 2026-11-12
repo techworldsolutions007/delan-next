@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState, Suspense } from "react";
 import LazySection from "@/components/LazySection";
 import NewsletterPopup from "../NewsletterPopup";
 import HeroSection from "../home/HeroSection";
-const CategoriesSection = React.lazy(() => import("../home/CategoriesSection"));
+// const CategoriesSection = React.lazy(() => import("../home/CategoriesSection"));
+const CategoriesSectionNew = React.lazy(() => import("../home/CategoriesSectionNew"));
 const InteractiveModelSection = React.lazy(() =>
   import("../home/InteractiveModelSection")
 );
@@ -105,11 +106,17 @@ export default function Home() {
       //   ),
       // },
 
+      // {
+      //   key: "categories-section",
+      //   minHeight: "43.75vw",
+      //   mobileMinHeight: "150vw",
+      //   render: () => <CategoriesSection />,
+      // },
       {
-        key: "categories-section",
+        key: "categories-section-new",
         minHeight: "43.75vw",
         mobileMinHeight: "150vw",
-        render: () => <CategoriesSection />,
+        render: () => <CategoriesSectionNew />,
       },
       {
         key: "bestsellers",
