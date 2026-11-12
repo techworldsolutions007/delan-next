@@ -1,12 +1,10 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-// src/components/CartSidebar.jsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Minus, Plus, X, RefreshCw } from "lucide-react";
+import { Minus, Plus, X, RefreshCw, Trash2 } from "lucide-react";
 import { shopify } from "@/lib/shopify";
 import { releaseFocusForCheckout } from "@/lib/checkout-helpers";
 import { fetchAllLooksLite, pickLookMatesForCart } from "@/lib/looks";
@@ -38,6 +36,17 @@ const CART_QUERY = /* GraphQL */ `
                   id title handle
                   collections(first: 10) {
                     edges { node { handle title } }
+                  }
+                  relatedStyles: metafield(namespace: "custom", key: "related_styles") {
+                    references(first: 5) {
+                      nodes {
+                        ... on Product {
+                          id title handle
+                          featuredImage { url altText }
+                          priceRange { minVariantPrice { amount currencyCode } }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -76,7 +85,6 @@ const CART_LINES_REMOVE = /* GraphQL */ `
   }
 `;
 
-/* Product recommendations */
 const PRODUCT_RECS = /* GraphQL */ `
   query ProductRecs($productId: ID!) {
     productRecommendations(productId: $productId) {
@@ -177,13 +185,71 @@ export default function CartSidebar({ open, onOpenChange }) {
   const timersRef = useRef({});
   const lastWriteTSRef = useRef(0);
 
+  // Back-button closes the cart instead of navigating away
+  const historyPushedRef = useRef(false);
+  useEffect(() => {
+    if (open) {
+      history.pushState({ cartOpen: true }, '');
+      historyPushedRef.current = true;
+    } else if (historyPushedRef.current) {
+      historyPushedRef.current = false;
+      if (history.state?.cartOpen === true) {
+        history.back();
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (open) onOpenChange?.(false);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [open, onOpenChange]);
+
   const subtotal = cart?.cost?.subtotalAmount;
   const checkoutUrl = cart?.checkoutUrl;
   const lines = useMemo(() => cart?.lines?.edges?.map(e => e.node) ?? [], [cart]);
 
+  // Products from product metafield "related_styles" across all cart items
+  const pairItWith = useMemo(() => {
+    const cartProductIds = new Set(lines.map(l => l.merchandise?.product?.id).filter(Boolean));
+    const seen = new Set();
+    const result = [];
+    for (const line of lines) {
+      const nodes = line.merchandise?.product?.relatedStyles?.references?.nodes ?? [];
+      for (const p of nodes) {
+        if (!p?.id || seen.has(p.id) || cartProductIds.has(p.id)) continue;
+        seen.add(p.id);
+        result.push(p);
+      }
+    }
+    return result;
+  }, [lines]);
+
   const [lookMates, setLookMates] = useState([]);
   const [recs, setRecs] = useState([]);
   const [recsLoading, setRecsLoading] = useState(false);
+
+  // Merge pairItWith (metafield, highest priority) + lookMates into one "Complete the Look" list
+  const completeTheLook = useMemo(() => {
+    const seen = new Set(pairItWith.map(p => p.id));
+    const cartIds = new Set(lines.map(l => l.merchandise?.product?.id).filter(Boolean));
+    const combined = [...pairItWith];
+    for (const p of lookMates) {
+      if (!seen.has(p.id) && !cartIds.has(p.id)) {
+        seen.add(p.id);
+        combined.push(p);
+      }
+    }
+    return combined.slice(0, 5);
+  }, [pairItWith, lookMates, lines]);
+
+  // Filter recs: skip anything already in "Complete the Look"
+  const filteredRecs = useMemo(() => {
+    const lookIds = new Set(completeTheLook.map(p => p.id));
+    return recs.filter(p => !lookIds.has(p.id)).slice(0, 4);
+  }, [recs, completeTheLook]);
 
   // GoKwik SDK state
   const [gokwikReady, setGokwikReady] = useState(false);
@@ -221,17 +287,15 @@ export default function CartSidebar({ open, onOpenChange }) {
 
     setRecsLoading(true);
     try {
-      // ── 1. Look-mates: products from looks that share a cart item ────────
       let mates = [];
       try {
         const allLooks = await withTimeout(fetchAllLooksLite(shopify), 8000, "looks timeout");
         mates = pickLookMatesForCart(productIds, allLooks).slice(0, 4);
       } catch {
-        // non-fatal — fall through to regular recs only
+        // non-fatal
       }
       setLookMates(mates);
 
-      // ── 2. Regular recs — Shopify productRecommendations ─────────────────
       const mateIds = new Set(mates.map(p => p.id));
       const cartSet = new Set(productIds);
       const seeds = productIds.slice(0, 3);
@@ -249,7 +313,7 @@ export default function CartSidebar({ open, onOpenChange }) {
       const seen = new Set();
       for (const p of all.flat()) {
         if (!p?.id || seen.has(p.id)) continue;
-        if (cartSet.has(p.id) || mateIds.has(p.id)) continue; // skip cart items & look-mates
+        if (cartSet.has(p.id) || mateIds.has(p.id)) continue;
         seen.add(p.id);
         uniq.push(p);
       }
@@ -382,12 +446,11 @@ export default function CartSidebar({ open, onOpenChange }) {
       return;
     }
 
-    // Define merchantInfo BEFORE loading SDK; set both keys to be safe.
     window.merchantInfo = {
       ...(window.merchantInfo || {}),
       mid: GOKWIK_MID,
-      merchantId: GOKWIK_MID,           // <- add alias (some setups use this)
-      environment: GOKWIK_ENV,          // 'sandbox' | 'production'
+      merchantId: GOKWIK_MID,
+      environment: GOKWIK_ENV,
       type: "merchantInfo",
       ...(GOKWIK_STORE_ID ? { storeId: GOKWIK_STORE_ID } : {}),
       ...(GOKWIK_FB_PIXEL ? { fbPixel: GOKWIK_FB_PIXEL } : {}),
@@ -401,7 +464,6 @@ export default function CartSidebar({ open, onOpenChange }) {
       s.onload = () => {
         try { if (window.gokwikSdk?.init) window.gokwikSdk.init(); } catch { }
         setGokwikReady(Boolean(window.triggerGokwikCustomCheckout || window.gokwikSdk));
-        // Helper: set cart just-in-time, then invoke GoKwik
         window.triggerGokwikCheckout = function triggerGokwikCheckout(cartId) {
           window.merchantInfo = {
             ...(window.merchantInfo || {}),
@@ -418,9 +480,7 @@ export default function CartSidebar({ open, onOpenChange }) {
           }
         };
       };
-      s.onerror = () => {
-        setGokwikReady(false);
-      };
+      s.onerror = () => { setGokwikReady(false); };
       document.body.appendChild(s);
     } else {
       setGokwikReady(Boolean(window.triggerGokwikCustomCheckout || window.gokwikSdk));
@@ -439,7 +499,7 @@ export default function CartSidebar({ open, onOpenChange }) {
         : showNotice("Checkout is temporarily unavailable. Please try again.");
     };
 
-    const cartId = cart?.id; // gid://shopify/Cart/xxxx
+    const cartId = cart?.id;
     if (!cartId || !GOKWIK_ENABLED || !GOKWIK_MID) {
       return fallbackToShopify();
     }
@@ -452,7 +512,6 @@ export default function CartSidebar({ open, onOpenChange }) {
         window.triggerGokwikCheckout(cartId);
         return;
       }
-      // Fallback if helper not present yet
       window.merchantInfo = {
         ...(window.merchantInfo || {}),
         mid: GOKWIK_MID,
@@ -468,49 +527,83 @@ export default function CartSidebar({ open, onOpenChange }) {
         return;
       }
     } catch {
-      // swallow and fallback to Shopify checkout
+      // fallback to Shopify
     }
-    // SDK not ready — native checkout
     return fallbackToShopify();
   }, [cart?.id, checkoutUrl, onOpenChange, showNotice]);
 
   /* --------------------------------- UI ----------------------------------- */
-  const EmptyState = (
-    <div className="flex h-full flex-col items-center justify-center text-center px-6">
-      <h3 className="text-xl font-bold text-neutral-900">Your cart is empty.</h3>
-    </div>
-  );
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[92vw] sm:w-[440px] p-0 flex flex-col overflow-hidden z-[120]">
-        <SheetHeader className="px-5 pt-5 pb-4 shrink-0">
-          <SheetTitle className="text-lg font-bold tracking-normal">My Cart</SheetTitle>
-        </SheetHeader>
+      <SheetContent className="w-full sm:w-[440px] p-0 flex flex-col gap-0 overflow-hidden z-[120] h-[100dvh]">
 
+        {/* ── HEADER ── */}
+        <div className="shrink-0 flex items-center justify-between px-5 h-14 border-b border-neutral-100">
+          <div className="flex items-center gap-2.5">
+            <SheetTitle className="text-[15px] font-semibold tracking-wide text-neutral-900">
+              Your Bag
+            </SheetTitle>
+            {(cart?.totalQuantity ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center h-[18px] min-w-[18px] rounded-full bg-primary/10 text-primary text-[10px] font-semibold px-1.5 tabular-nums leading-none">
+                {cart.totalQuantity}
+              </span>
+            )}
+          </div>
+          <SheetClose asChild>
+            <button
+              className="flex items-center justify-center h-8 w-8 rounded-full text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
+              aria-label="Close cart"
+            >
+              <X className="h-[15px] w-[15px]" strokeWidth={1.75} />
+            </button>
+          </SheetClose>
+        </div>
+
+        {/* ── NOTICE ── */}
         {notice ? (
-          <div className="mx-5 mb-2 rounded bg-amber-50 text-amber-900 text-xs px-3 py-2">
+          <div className="shrink-0 mx-5 mt-3 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 text-xs px-3 py-2.5 leading-snug">
             {notice}
           </div>
         ) : null}
 
+        {/* ── BODY ── */}
         <div className="flex-1 min-h-0">
           {loading && !cart ? (
-            <div className="h-full overflow-y-auto px-5 py-5 [scrollbar-gutter:stable] pr-4 overscroll-contain">
-              <CartSkeleton /><CartSkeleton /><CartSkeleton />
+            <div className="h-full overflow-y-auto no-scrollbar px-5 py-5 overscroll-contain space-y-5">
+              <CartSkeleton />
+              <CartSkeleton />
             </div>
           ) : error ? (
             <div className="p-6">
-              <p className="text-sm text-red-600">{error}</p>
-              <Button className="mt-3" variant="secondary" onClick={() => fetchCart(true)}>
-                <RefreshCw className="mr-2 h-4 w-4" /> Try again
+              <p className="text-sm text-red-500 mb-3">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => fetchCart(true)}>
+                <RefreshCw className="mr-2 h-3.5 w-3.5" /> Try again
               </Button>
             </div>
           ) : !lines.length ? (
-            EmptyState
+            /* ── EMPTY STATE ── */
+            <div className="flex h-full flex-col items-center justify-center text-center px-8 pb-20">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-neutral-100">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-400">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <path d="M16 10a4 4 0 01-8 0" />
+                </svg>
+              </div>
+              <p className="text-[13px] font-medium text-neutral-800">Your bag is empty</p>
+              <p className="mt-1 text-[11px] text-neutral-400 leading-relaxed">Add pieces you love to get started.</p>
+              <SheetClose asChild>
+                <button className="mt-5 text-[12px] font-medium text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">
+                  Explore Collection
+                </button>
+              </SheetClose>
+            </div>
           ) : (
-            <div className="h-full overflow-y-auto px-5 py-3 [scrollbar-gutter:stable] pr-4 overscroll-contain">
-              <ul className="divide-y divide-neutral-200">
+            /* ── CART CONTENT ── */
+            <div className="h-full overflow-y-auto no-scrollbar overscroll-contain">
+
+              {/* Cart Items */}
+              <ul className="divide-y divide-neutral-100 px-5">
                 {lines.map((l) => {
                   const v = l.merchandise;
                   const img = v?.image?.url;
@@ -519,230 +612,259 @@ export default function CartSidebar({ open, onOpenChange }) {
                   const variant = v?.title && v.title !== "Default Title" ? v.title : "";
                   const lineTotal = l?.cost?.subtotalAmount;
                   const isRemoving = !!removing[l.id];
-                  const max = Number.isFinite(v?.quantityAvailable) ? v.quantityAvailable : undefined;
                   return (
-                    <li key={l.id} className="py-4 first:pt-1 transition-opacity duration-200" style={{ opacity: isRemoving ? 0.4 : 1 }}>
+                    <li
+                      key={l.id}
+                      className="py-4 transition-opacity duration-200"
+                      style={{ opacity: isRemoving ? 0.4 : 1 }}
+                    >
                       <div className="flex gap-3">
-                        {/* Image with overlay remove button */}
-                        <div className="relative shrink-0">
-                          <Link
-                            href={`/products/${v?.product?.handle ?? ""}`}
-                            onClick={() => onOpenChange?.(false)}
-                            className="block rounded-lg overflow-hidden bg-neutral-100"
-                            aria-label={title}
-                          >
-                            {img ? (
-                              <Image src={img} alt={alt} width={80} height={80} className="object-cover w-20 h-20" />
-                            ) : (
-                              <div className="h-20 w-20 bg-neutral-100" />
-                            )}
-                          </Link>
-                          <button
-                            className="absolute -top-2 -left-2 h-6 w-6 rounded-full bg-neutral-800 text-neutral-400 flex items-center justify-center ring-1 ring-neutral-600 hover:text-white disabled:pointer-events-none transition-colors"
-                            onClick={() => removeLine(l.id)}
-                            disabled={isRemoving}
-                            aria-label="Remove item"
-                          >
-                            <X className="h-3.5 w-3.5" strokeWidth={2} />
-                          </button>
-                        </div>
+                        {/* Product image */}
+                        <Link
+                          href={`/products/${v?.product?.handle ?? ""}`}
+                          onClick={() => onOpenChange?.(false)}
+                          className="shrink-0 block w-[88px] h-[88px] rounded-lg overflow-hidden bg-neutral-100"
+                          aria-label={title}
+                        >
+                          {img ? (
+                            <Image src={img} alt={alt} width={88} height={88} className="object-cover w-full h-full" />
+                          ) : (
+                            <div className="w-full h-full bg-neutral-100" />
+                          )}
+                        </Link>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
+                        {/* Product details */}
+                        <div className="flex-1 min-w-0 flex flex-col">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-medium text-neutral-900 line-clamp-2 leading-snug">{title}</p>
-                            <span className="shrink-0 whitespace-nowrap tabular-nums text-sm font-semibold ml-2">
+                            <p className="text-[13px] font-medium text-neutral-900 line-clamp-2 leading-snug">{title}</p>
+                            <span className="shrink-0 text-[13px] font-semibold tabular-nums text-neutral-900 ml-1">
                               {fmt(lineTotal?.amount, lineTotal?.currencyCode)}
                             </span>
                           </div>
-                          {variant ? <p className="text-xs text-neutral-500 mt-0.5">{variant}</p> : null}
 
-                          {/* Quantity pill — right-aligned */}
-                          <div className="mt-2 flex justify-end">
-                            <div className="inline-flex items-center h-8 rounded-full border border-neutral-300">
+                          {variant ? (
+                            <p className="text-[10px] text-neutral-400 mt-0.5 uppercase tracking-widest">{variant}</p>
+                          ) : null}
+
+                          {/* Qty controls + remove */}
+                          <div className="mt-auto pt-2.5 flex items-center justify-between">
+                            <div className="inline-flex items-center h-7 rounded-full border border-neutral-200 bg-white">
                               <button
-                                className="h-8 w-8 grid place-items-center hover:bg-neutral-100 rounded-l-full transition-colors"
+                                className="h-7 w-7 grid place-items-center text-neutral-500 hover:text-neutral-900 rounded-l-full transition-colors"
                                 onClick={() => adjustQty(l.id, -1)}
                                 aria-label="Decrease quantity"
                               >
-                                <Minus className="h-3.5 w-3.5" />
+                                <Minus className="h-2.5 w-2.5" strokeWidth={2.5} />
                               </button>
-                              <span className="px-2 text-sm tabular-nums min-w-[1.5rem] text-center">{l.quantity}</span>
+                              <span className="px-2 text-[12px] tabular-nums min-w-[1.25rem] text-center font-medium text-neutral-800">
+                                {l.quantity}
+                              </span>
                               <button
-                                className="h-8 w-8 grid place-items-center hover:bg-neutral-100 rounded-r-full transition-colors"
+                                className="h-7 w-7 grid place-items-center text-neutral-500 hover:text-neutral-900 rounded-r-full transition-colors"
                                 onClick={() => adjustQty(l.id, +1)}
                                 aria-label="Increase quantity"
                               >
-                                <Plus className="h-3.5 w-3.5" />
+                                <Plus className="h-2.5 w-2.5" strokeWidth={2.5} />
                               </button>
                             </div>
+
+                            <button
+                              className="p-1.5 text-neutral-300 hover:text-neutral-500 transition-colors disabled:pointer-events-none"
+                              onClick={() => removeLine(l.id)}
+                              disabled={isRemoving}
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                            </button>
                           </div>
                         </div>
                       </div>
+
                     </li>
                   );
                 })}
               </ul>
 
-              {/* ── Recommendations ── */}
-              {recsLoading ? (
-                <div className="mt-8 space-y-4">
-                  <div className="h-5 w-40 bg-neutral-200 rounded animate-pulse" />
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i}>
-                      <div className="flex items-center gap-4 animate-pulse">
-                        <div className="h-20 w-20 rounded-lg bg-neutral-200 shrink-0" />
-                        <div className="flex-1 space-y-3">
-                          <div className="h-4 w-2/3 bg-neutral-200 rounded" />
-                          <div className="h-3 w-1/3 bg-neutral-200 rounded" />
-                        </div>
-                        <div className="h-9 w-16 rounded border bg-neutral-100 shrink-0" />
-                      </div>
-                      {i < 2 && <Separator className="my-4" />}
-                    </div>
-                  ))}
-                </div>
-              ) : (lookMates.length > 0 || recs.length > 0) ? (
-                <div className="mt-8">
-                  {/* ── Look-mates first ── */}
-                  {lookMates.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-semibold mb-3 tracking-[0.025em]">
-                        Complete the Look
-                      </h3>
-                      <ul className="divide-y divide-neutral-200">
-                        {lookMates.map((p) => {
-                          const img = p?.featuredImage?.url;
-                          const alt = p?.featuredImage?.altText || p?.title || "Product";
-                          const price = p?.priceRange?.minVariantPrice;
-                          return (
-                            <li key={p.id} className="py-4">
-                              <div className="flex items-center gap-4">
-                                <Link href={`/products/${p.handle}`} onClick={() => onOpenChange?.(false)}
-                                  className="block shrink-0 rounded-lg overflow-hidden bg-neutral-100" aria-label={p.title}>
-                                  {img ? (
-                                    <Image src={img} alt={alt} width={80} height={80} className="object-cover w-20 h-20" />
-                                  ) : (
-                                    <div className="h-20 w-20 bg-neutral-100" />
-                                  )}
-                                </Link>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-neutral-900">{p.title}</p>
-                                  {price?.amount && (
-                                    <span className="mt-1 block text-sm font-semibold tabular-nums">
-                                      {fmt(price.amount, price.currencyCode)}
-                                    </span>
-                                  )}
-                                </div>
-                                <Link href={`/products/${p.handle}`} onClick={() => onOpenChange?.(false)}
-                                  className="inline-flex items-center justify-center h-9 px-4 shrink-0 rounded border border-primary text-sm text-primary font-medium hover:bg-primary hover:text-white transition-colors">
-                                  View
-                                </Link>
+              {/* ── Complete the Look ── */}
+              {(completeTheLook.length > 0 || recsLoading) && (
+                <div className="px-5 mt-6">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
+                    Complete the Look
+                  </p>
+                  {recsLoading && completeTheLook.length === 0 ? (
+                    <RecSkeleton />
+                  ) : (
+                    <ul className="divide-y divide-neutral-100">
+                      {completeTheLook.map((p) => {
+                        const img = p?.featuredImage?.url;
+                        const alt = p?.featuredImage?.altText || p?.title || "Product";
+                        const price = p?.priceRange?.minVariantPrice;
+                        return (
+                          <li key={p.id} className="py-3 first:pt-0">
+                            <div className="flex items-center gap-3">
+                              <Link
+                                href={`/products/${p.handle}`}
+                                onClick={() => onOpenChange?.(false)}
+                                className="shrink-0 block w-[60px] h-[60px] rounded-md overflow-hidden bg-neutral-100"
+                                aria-label={p.title}
+                              >
+                                {img ? (
+                                  <Image src={img} alt={alt} width={60} height={60} className="object-cover w-full h-full" />
+                                ) : (
+                                  <div className="w-full h-full bg-neutral-100" />
+                                )}
+                              </Link>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[12px] font-medium text-neutral-800 line-clamp-2 leading-snug">{p.title}</p>
+                                {price?.amount && (
+                                  <span className="mt-0.5 block text-[12px] font-semibold tabular-nums text-neutral-900">
+                                    {fmt(price.amount, price.currencyCode)}
+                                  </span>
+                                )}
                               </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
+                              <Link
+                                href={`/products/${p.handle}`}
+                                onClick={() => onOpenChange?.(false)}
+                                className="shrink-0 inline-flex items-center justify-center h-7 px-3 rounded-full border border-neutral-300 text-[11px] font-medium text-neutral-600 hover:border-primary hover:text-primary transition-colors"
+                              >
+                                View
+                              </Link>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
+                </div>
+              )}
 
-                  {/* ── Regular recs below ── */}
-                  {recs.length > 0 && (
-                    <div className={lookMates.length > 0 ? "mt-6" : ""}>
-                      <h3 className="text-base font-semibold mb-3 tracking-[0.025em]">
-                        You may also like
-                      </h3>
-                      <ul className="divide-y divide-neutral-200">
-                        {recs.map((p) => {
-                          const img = p?.featuredImage?.url;
-                          const alt = p?.featuredImage?.altText || p?.title || "Product";
-                          const v = p?.variants?.nodes?.[0];
-                          const price = v?.price;
-                          const compare = v?.compareAtPrice;
-                          return (
-                            <li key={p.id} className="py-4">
-                              <div className="flex items-center gap-4">
-                                <Link href={`/products/${p.handle}`} onClick={() => onOpenChange?.(false)}
-                                  className="block shrink-0 rounded-lg overflow-hidden bg-neutral-100" aria-label={p.title}>
-                                  {img ? (
-                                    <Image src={img} alt={alt} width={80} height={80} className="object-cover w-20 h-20" />
-                                  ) : (
-                                    <div className="h-20 w-20 bg-neutral-100" />
-                                  )}
-                                </Link>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-neutral-900">{p.title}</p>
-                                  <div className="mt-1 flex items-center gap-2">
-                                    <span className="text-sm font-semibold tabular-nums">{fmt(price?.amount, price?.currencyCode)}</span>
-                                    {compare?.amount && Number(compare.amount) > Number(price?.amount ?? 0) ? (
-                                      <span className="text-xs text-neutral-500 line-through tabular-nums">
-                                        {fmt(compare.amount, compare.currencyCode)}
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                </div>
-                                <Link href={`/products/${p.handle}`} onClick={() => onOpenChange?.(false)}
-                                  className="inline-flex items-center justify-center h-9 px-4 shrink-0 rounded border border-primary text-sm text-primary font-medium hover:bg-primary hover:text-white transition-colors">
-                                  View
-                                </Link>
+              {/* ── You May Also Like ── */}
+              {!recsLoading && filteredRecs.length > 0 && (
+                <div className="px-5 mt-5 pb-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
+                    You May Also Like
+                  </p>
+                  <ul className="divide-y divide-neutral-100">
+                    {filteredRecs.map((p) => {
+                      const img = p?.featuredImage?.url;
+                      const alt = p?.featuredImage?.altText || p?.title || "Product";
+                      const v = p?.variants?.nodes?.[0];
+                      const price = v?.price;
+                      const compare = v?.compareAtPrice;
+                      return (
+                        <li key={p.id} className="py-3 first:pt-0">
+                          <div className="flex items-center gap-3">
+                            <Link
+                              href={`/products/${p.handle}`}
+                              onClick={() => onOpenChange?.(false)}
+                              className="shrink-0 block w-[60px] h-[60px] rounded-md overflow-hidden bg-neutral-100"
+                              aria-label={p.title}
+                            >
+                              {img ? (
+                                <Image src={img} alt={alt} width={60} height={60} className="object-cover w-full h-full" />
+                              ) : (
+                                <div className="w-full h-full bg-neutral-100" />
+                              )}
+                            </Link>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12px] font-medium text-neutral-800 line-clamp-2 leading-snug">{p.title}</p>
+                              <div className="mt-0.5 flex items-center gap-1.5">
+                                <span className="text-[12px] font-semibold tabular-nums text-neutral-900">
+                                  {fmt(price?.amount, price?.currencyCode)}
+                                </span>
+                                {compare?.amount && Number(compare.amount) > Number(price?.amount ?? 0) ? (
+                                  <span className="text-[10px] text-neutral-400 line-through tabular-nums">
+                                    {fmt(compare.amount, compare.currencyCode)}
+                                  </span>
+                                ) : null}
                               </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  )}
+                            </div>
+                            <Link
+                              href={`/products/${p.handle}`}
+                              onClick={() => onOpenChange?.(false)}
+                              className="shrink-0 inline-flex items-center justify-center h-7 px-3 rounded-full border border-neutral-300 text-[11px] font-medium text-neutral-600 hover:border-primary hover:text-primary transition-colors"
+                            >
+                              View
+                            </Link>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-              ) : null}
+              )}
+
+              <div className="h-4" />
             </div>
           )}
         </div>
 
-        {/* ── Footer: only when cart has items ── */}
-        {lines.length > 0 && <div className="shrink-0 px-5 pt-1 pb-5 border-t border-neutral-200">
-          {/* Total row */}
-          <div className="flex items-center justify-between py-3">
-            <span className="text-sm text-neutral-700">Total</span>
-            <span className="text-sm font-semibold tabular-nums whitespace-nowrap">
-              {fmt(subtotal?.amount ?? 0, subtotal?.currencyCode ?? "INR")}
-            </span>
-          </div>
-          <Separator />
-
-          {/* Note */}
-          <p className="text-xs text-neutral-500 py-3">
-            Taxes &amp; shipping calculated at checkout.
-          </p>
-
-          {/* Proceed to Checkout — full-width pill */}
-          <Button
-            id="checkoutButton"
-            disabled={lines.length === 0 || !cart?.id || (!gokwikReady && !checkoutUrl)}
-            onClick={startGoKwikCheckout}
-            className="w-full h-12 rounded-full bg-primary hover:bg-primary/90 text-white text-sm font-medium tracking-wide active:scale-[0.98] transition-all disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-primary disabled:active:scale-100"
-            title={!gokwikReady && checkoutUrl ? "Loading checkout…" : "Proceed to Checkout"}
+        {/* ── FOOTER ── */}
+        {lines.length > 0 && (
+          <div
+            className="shrink-0 border-t border-neutral-100 bg-white px-5 pt-4"
+            style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))' }}
           >
-            Proceed to Checkout
-          </Button>
-        </div>}
+            {/* Subtotal row */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[13px] text-neutral-500">Subtotal</span>
+              <span className="text-[15px] font-semibold tabular-nums text-neutral-900">
+                {fmt(subtotal?.amount ?? 0, subtotal?.currencyCode ?? "INR")}
+              </span>
+            </div>
+
+            {/* Checkout button */}
+            <button
+              id="checkoutButton"
+              disabled={lines.length === 0 || !cart?.id || (!gokwikReady && !checkoutUrl)}
+              onClick={startGoKwikCheckout}
+              className="w-full h-14 flex items-center justify-center rounded-[12px] bg-primary text-white text-[15px] font-bold uppercase tracking-[0.15em] transition-all duration-300 active:scale-[0.98] shadow-sm hover:shadow-md hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+              title={!gokwikReady && checkoutUrl ? "Loading checkout…" : "Proceed to Checkout"}
+            >
+              Proceed to Checkout
+            </button>
+
+            <p className="text-[10px] text-neutral-400 text-center mt-2.5 leading-relaxed">
+              Shipping and taxes calculated at checkout.
+            </p>
+          </div>
+        )}
+
       </SheetContent>
     </Sheet>
   );
 }
 
-/* -------------------------------- Skeleton -------------------------------- */
+/* -------------------------------- Skeletons -------------------------------- */
 function CartSkeleton() {
   return (
-    <div className="flex gap-4 animate-pulse">
-      <div className="h-24 w-20 rounded-lg bg-neutral-200" />
-      <div className="flex-1 space-y-3">
-        <div className="h-4 w-2/3 bg-neutral-200 rounded" />
-        <div className="h-3 w-1/3 bg-neutral-200 rounded" />
-        <div className="mt-4 flex items-center justify-between">
-          <div className="h-9 w-28 bg-neutral-200 rounded-full" />
-          <div className="h-4 w-20 bg-neutral-200 rounded" />
+    <div className="flex gap-3 animate-pulse">
+      <div className="h-[88px] w-[88px] rounded-lg bg-neutral-100 shrink-0" />
+      <div className="flex-1 space-y-2.5 pt-0.5">
+        <div className="h-3.5 w-4/5 bg-neutral-100 rounded" />
+        <div className="h-3 w-2/5 bg-neutral-100 rounded" />
+        <div className="pt-4 flex items-center justify-between">
+          <div className="h-7 w-24 bg-neutral-100 rounded-full" />
+          <div className="h-3.5 w-3.5 bg-neutral-100 rounded" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function RecSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[0, 1, 2].map(i => (
+        <div key={i} className="flex items-center gap-3 animate-pulse">
+          <div className="h-[60px] w-[60px] rounded-md bg-neutral-100 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-3/4 bg-neutral-100 rounded" />
+            <div className="h-3 w-1/3 bg-neutral-100 rounded" />
+          </div>
+          <div className="h-7 w-14 rounded-full bg-neutral-100 shrink-0" />
+        </div>
+      ))}
     </div>
   );
 }

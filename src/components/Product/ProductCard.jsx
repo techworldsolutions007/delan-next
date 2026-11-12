@@ -204,7 +204,7 @@ export default function ProductCard({
                       aria-busy={isAddBusy}
                       aria-label={desktopCtaLabel}
                       title={justAdded ? "Added!" : desktopCtaLabel}
-                      className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-white/70 bg-white/88 px-4 text-[11px] uppercase tracking-[0.15em] leading-snug text-[#2d2d2d] shadow-[0_14px_30px_rgba(0,0,0,0.16)] backdrop-blur-sm transition-all duration-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-75"
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-[12px] border border-white/70 bg-white/88 px-4 text-[11px] uppercase tracking-[0.15em] leading-snug text-[#2d2d2d] shadow-[0_14px_30px_rgba(0,0,0,0.16)] backdrop-blur-sm transition-all duration-200 hover:bg-white disabled:cursor-not-allowed disabled:opacity-75"
                     >
                       {isAddBusy ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

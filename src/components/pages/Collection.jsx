@@ -190,13 +190,18 @@ function parseNavConfig(col) {
 }
 
 const deriveSubcategorySlugs = (rawProducts, navConfig) => {
-  const explicit = Array.isArray(navConfig?.displayOrderSlugs) ? navConfig.displayOrderSlugs : [];
-  if (explicit.length) return explicit;
-  const set = new Set();
+  // Build the set of slugs that actually have at least one product
+  const populated = new Set();
   for (const p of rawProducts || []) {
-    if (Array.isArray(p?.subcategorySlugs)) for (const s of p.subcategorySlugs) set.add(s);
+    if (Array.isArray(p?.subcategorySlugs)) for (const s of p.subcategorySlugs) populated.add(s);
   }
-  return Array.from(set);
+
+  const explicit = Array.isArray(navConfig?.displayOrderSlugs) ? navConfig.displayOrderSlugs : [];
+  if (explicit.length) {
+    // Keep the explicit order but drop any slug with 0 products
+    return explicit.filter(s => populated.has(s));
+  }
+  return Array.from(populated);
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
