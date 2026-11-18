@@ -48,7 +48,7 @@ const SEARCH_PRODUCTS = `
           collections(first: 10) { edges { node { handle } } }
           images(first: 2) { edges { node { url altText } } }
           priceRange { minVariantPrice { amount currencyCode } }
-          variants(first: 20) {
+          variants(first: 250) {
             edges {
               node {
                 id
@@ -748,7 +748,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
       try {
         if (isSearchMode) {
           const searchArgs = getSearchSortArgs(sort);
-          const data = await shopify(SEARCH_PRODUCTS, { query: qParam, first: 20, ...searchArgs });
+          const data = await shopify(SEARCH_PRODUCTS, { query: qParam, first: 250, ...searchArgs });
           if (cancelled) return;
           const prods = (data?.products?.edges ?? []).map(({ node }) => toProductShape(node));
           const pageInfo = data?.products?.pageInfo;
@@ -761,7 +761,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
           setEndCursor(pageInfo?.endCursor || null);
         } else {
           const collectionArgs = getCollectionSortArgs(sort);
-          const data = await shopify(GET_COLLECTION_BY_HANDLE, { handle, first: 20, after: null, ...collectionArgs });
+          const data = await shopify(GET_COLLECTION_BY_HANDLE, { handle, first: 250, after: null, ...collectionArgs });
           if (cancelled) return;
           const col = data?.collection;
           if (!col) { setTitle(""); setRawProducts([]); return; }
@@ -884,7 +884,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
     try {
       if (isSearchMode) {
         const searchArgs = getSearchSortArgs(sort);
-        const data = await shopify(SEARCH_PRODUCTS, { query: qParam, first: 20, after: endCursor, ...searchArgs });
+        const data = await shopify(SEARCH_PRODUCTS, { query: qParam, first: 250, after: endCursor, ...searchArgs });
         const prods = (data?.products?.edges ?? []).map(({ node }) => toProductShape(node));
         const pageInfo = data?.products?.pageInfo;
         setRawProducts(prev => [...prev, ...prods]);
@@ -892,7 +892,7 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         setEndCursor(pageInfo?.endCursor || null);
       } else {
         const collectionArgs = getCollectionSortArgs(sort);
-        const data = await shopify(GET_COLLECTION_BY_HANDLE, { handle, first: 20, after: endCursor, ...collectionArgs });
+        const data = await shopify(GET_COLLECTION_BY_HANDLE, { handle, first: 250, after: endCursor, ...collectionArgs });
         const col = data?.collection;
         if (col) {
           const prods = parseProductsFromCollection(col, handle);
