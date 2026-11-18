@@ -9,7 +9,6 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Check, X, SlidersHorizontal, Rows2, Columns2, ChevronDown } from "lucide-react";
-import LazySection from "@/components/LazySection";
 import ProductCard from "@/components/Product/ProductCard";
 import { useQuickBuy } from "@/context/QuickBuyContext";
 import { normalizeLooks } from "@/lib/looks";
@@ -107,22 +106,6 @@ const SORT_OPTIONS = [
 ];
 
 const LookCollection = React.lazy(() => import("../Product/LookCollection"));
-const SuggestionSection = React.lazy(() => import("../Product/SuggestionSection"));
-const RecentlyViewed = React.lazy(() => import("../Product/RecentlyViewed"));
-const COLLECTION_TAIL_SECTIONS = [
-  {
-    key: "suggestions",
-    minHeight: "60vh",
-    rootMargin: "350px 0px",
-    render: () => <SuggestionSection />,
-  },
-  {
-    key: "recently-viewed",
-    minHeight: "55vh",
-    rootMargin: "350px 0px",
-    render: () => <RecentlyViewed />,
-  },
-];
 
 const normalizeGokwikEnv = (raw) => {
   const v = (raw || "").toLowerCase();
@@ -1325,9 +1308,6 @@ export default function CollectionPage({ handle: handleProp, params, initialData
         </div>
       )}
 
-      {COLLECTION_TAIL_SECTIONS.map(({ key, ...sectionProps }) => (
-        <LazySection key={key} {...sectionProps} />
-      ))}
     </div>
   );
 }
