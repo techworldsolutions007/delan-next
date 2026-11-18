@@ -1,107 +1,32 @@
 'use client';
-import { useParams } from 'next/navigation';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Ruler, Info } from 'lucide-react';
-import { shopify } from '@/lib/shopify';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-// --- Shopify Constants ---
-const SIZE_CHART_METAFIELD_NAMESPACE = "custom";
-const SIZE_CHART_METAFIELD_KEY = "size_chart";
-const DEFAULT_BODY_SIZE_CHART_TYPE = "default_body_size_chart";
-const DEFAULT_BODY_SIZE_CHART_HANDLE = "standard-measurements";
-const PRODUCT_SIZE_CHART_TYPE = "product_size_chart";
-
-// --- GraphQL Query ---
-const GET_SIZE_CHARTS = `
-  query GetSizeCharts($productHandle: String!) {
-    defaultChart: metaobject(handle: { type: "${DEFAULT_BODY_SIZE_CHART_TYPE}", handle: "${DEFAULT_BODY_SIZE_CHART_HANDLE}" }) {
-      id
-      handle
-      type
-      title: field(key: "title") { value }
-      subtitle: field(key: "subtitle") { value }
-      tableData: field(key: "table_data") { value }
-      unitLabel: field(key: "unit_label") { value }
-    }
-    product(handle: $productHandle) {
-      sizeChartMetafield: metafield(namespace: "${SIZE_CHART_METAFIELD_NAMESPACE}", key: "${SIZE_CHART_METAFIELD_KEY}") {
-        reference {
-          ... on Metaobject {
-            id
-            handle
-            type
-            title: field(key: "title") { value }
-            tableData: field(key: "table_data") { value }
-            note: field(key: "note") { value }
-          }
-        }
-      }
-    }
+// Extract the first image URL from product description HTML — it's the garment size chart
+function extractGarmentImageUrl(descriptionHtml) {
+  if (!descriptionHtml || typeof window === 'undefined') return null;
+  try {
+    const doc = new DOMParser().parseFromString(descriptionHtml, 'text/html');
+    const img = doc.querySelector('img');
+    return img ? (img.src || img.getAttribute('src') || null) : null;
+  } catch {
+    return null;
   }
-`;
+}
 
-// --- Helpers ---
-const safeJsonParse = (jsonString, fallback = null) => {
-  if (!jsonString) return fallback;
-  try { return JSON.parse(jsonString); }
-  catch (e) { console.error("SizeChart: JSON parse error", e); return fallback; }
-};
+// --- Static body measurements (all values in inches) ---
+const BODY_MEASUREMENTS_IN = [
+  { size: 'XS',  bust: 32, waist: 26, hip: 35 },
+  { size: 'S',   bust: 34, waist: 28, hip: 37 },
+  { size: 'M',   bust: 36, waist: 30, hip: 39 },
+  { size: 'L',   bust: 38, waist: 32, hip: 41 },
+  { size: 'XL',  bust: 40, waist: 34, hip: 43 },
+  { size: 'XXL', bust: 42, waist: 36, hip: 45 },
+  { size: '3XL', bust: 44, waist: 38, hip: 47 },
+];
 
-const normalizeChartData = (metaobject) => {
-  if (!metaobject) return null;
-  const tableData = safeJsonParse(metaobject.tableData?.value || metaobject.tableData);
-  if (!tableData) return null;
-
-  let parsedRows = tableData.rows || [];
-  const sizeColKey = (tableData.columns || []).find(c => c.toLowerCase() === 'size');
-  if (sizeColKey) {
-    const excludedSizes = ['4XL', '5XL', '6XL', '7XL', '8XL', 'XXXXL', 'XXXXXL'];
-    parsedRows = parsedRows.filter(row => {
-      const sizeVal = String(row[sizeColKey] || '').toUpperCase().trim();
-      return !excludedSizes.some(ex => sizeVal.includes(ex));
-    });
-  }
-
-  let noteText = metaobject.note?.value || metaobject.note || "";
-  const extraChargesNote = "Sizes beyond 3XL and customizations beyond our standard size chart will incur additional charges due to additional fabric and printing requirements.";
-  if (noteText) {
-    if (!noteText.includes("customizations beyond our standard size chart")) {
-      noteText = noteText + " " + extraChargesNote;
-    }
-  } else {
-    noteText = extraChargesNote;
-  }
-
-  return {
-    id: metaobject.id,
-    type: tableData.type || 'body',
-    title: metaobject.title?.value || metaobject.title || "Size Guide",
-    subtitle: metaobject.subtitle?.value || metaobject.subtitle || "",
-    note: noteText,
-    unitLabel: metaobject.unitLabel?.value || metaobject.unitLabel || "",
-    columns: tableData.columns || [],
-    rows: parsedRows,
-  };
-};
-
-const getBodyColumnGroups = (columns) => {
-  if (!columns) return { sizeCol: null, inchColumns: [], cmColumns: [] };
-  return {
-    sizeCol: columns.find(c => c.toLowerCase() === 'size'),
-    inchColumns: columns.filter(c => c.endsWith('_in')),
-    cmColumns: columns.filter(c => c.endsWith('_cm')),
-  };
-};
-
-const formatColumnLabel = (key) => {
-  if (!key) return "";
-  return key
-    .replace(/(_in|_cm)$/, "")
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
+const toCm = (inches) => Math.round(inches * 2.54 * 10) / 10;
 
 // --- Table primitives ---
 const Table = ({ children }) => (
@@ -137,195 +62,25 @@ const TableCell = ({ children, className = "" }) => (
   </td>
 );
 
-// --- SizeChartTable ---
-const SizeChartTable = ({ chart }) => {
-  const isBody = chart.type === 'body';
-  const { sizeCol, inchColumns, cmColumns } = isBody ? getBodyColumnGroups(chart.columns) : {};
-
-  return (
-    <Table>
-      <TableHeader>
-        {isBody ? (
-          <>
-            <TableRow className="border-b-0">
-              {sizeCol && (
-                <TableHead
-                  rowSpan={2}
-                  className="text-[#642c44] font-black border-r border-[#ede5ea] w-16 text-center"
-                >
-                  Size
-                </TableHead>
-              )}
-              {inchColumns.length > 0 && (
-                <TableHead
-                  colSpan={inchColumns.length}
-                  className="text-center border-r border-[#ede5ea] text-[#9e7a8a]"
-                >
-                  Inches
-                </TableHead>
-              )}
-              {cmColumns.length > 0 && (
-                <TableHead colSpan={cmColumns.length} className="text-center text-[#9e7a8a]">
-                  Centimeters
-                </TableHead>
-              )}
-            </TableRow>
-            <TableRow>
-              {inchColumns.map((col, idx) => (
-                <TableHead
-                  key={col}
-                  className={`text-center ${idx === inchColumns.length - 1 ? 'border-r border-[#ede5ea]' : ''}`}
-                >
-                  {formatColumnLabel(col)}
-                </TableHead>
-              ))}
-              {cmColumns.map((col) => (
-                <TableHead key={col} className="text-center">
-                  {formatColumnLabel(col)}
-                </TableHead>
-              ))}
-            </TableRow>
-          </>
-        ) : (
-          <TableRow>
-            {chart.columns.map((col, idx) => (
-              <TableHead
-                key={col}
-                className={`${
-                  idx === 0
-                    ? 'text-[#642c44] font-black border-r border-[#ede5ea]'
-                    : 'text-center border-r last:border-r-0 border-[#ede5ea]'
-                }`}
-              >
-                {col === 'measurement' ? 'Measurement' : col}
-              </TableHead>
-            ))}
-          </TableRow>
-        )}
-      </TableHeader>
-
-      <TableBody>
-        {chart.rows.map((row, rowIdx) => (
-          <TableRow key={rowIdx}>
-            {isBody ? (
-              <>
-                {sizeCol && (
-                  <TableCell className="font-bold text-[#642c44] bg-[#fdf8fa] border-r border-[#ede5ea] text-center tracking-[0.1em]">
-                    {row[sizeCol]}
-                  </TableCell>
-                )}
-                {inchColumns.map((col, idx) => (
-                  <TableCell
-                    key={col}
-                    className={`text-center ${idx === inchColumns.length - 1 ? 'border-r border-[#ede5ea]' : ''}`}
-                  >
-                    {row[col] || "—"}
-                  </TableCell>
-                ))}
-                {cmColumns.map((col) => (
-                  <TableCell key={col} className="text-center">
-                    {row[col] || "—"}
-                  </TableCell>
-                ))}
-              </>
-            ) : (
-              chart.columns.map((col, colIdx) => (
-                <TableCell
-                  key={colIdx}
-                  className={`${
-                    colIdx === 0
-                      ? 'font-bold text-[#642c44] bg-[#fdf8fa] border-r border-[#ede5ea]'
-                      : 'text-center border-r last:border-r-0 border-[#ede5ea]'
-                  }`}
-                >
-                  {row[col] || "—"}
-                </TableCell>
-              ))
-            )}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-};
-
-// --- Section ---
-const SizeChartSection = ({ chart }) => {
-  if (!chart || !chart.rows.length) return null;
-  const isGarment = chart.type === 'garment';
-
-  return (
-    <div className="space-y-4">
-      {/* Section label */}
-      <div className="flex items-center gap-2.5 px-0.5">
-        <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: '#fdf0f4' }}>
-          {isGarment
-            ? <Ruler size={12} className="text-[#642c44]" />
-            : <Info size={12} className="text-[#642c44]" />
-          }
-        </div>
-        <span className="montserrat-600 text-[9px] uppercase tracking-[0.22em] text-[#9e7a8a]">
-          {chart.title}
-        </span>
-        <div className="flex-1 h-px bg-[#ede5ea]" />
-      </div>
-
-      <SizeChartTable chart={chart} />
-
-      {chart.note && (
-        <p className="px-0.5 text-[10px] text-[#b08898] montserrat-500 leading-relaxed tracking-[0.03em]">
-          * {chart.note}
-        </p>
-      )}
-    </div>
-  );
-};
-
 // --- Main Component ---
-const SizeChartSlider = ({ isOpen, onClose, productHandle }) => {
-  const { handle: routeHandle } = useParams();
-  const handle = productHandle || routeHandle;
-  const [loading, setLoading] = useState(false);
-  const [sections, setSections] = useState([]);
-  const [heroData, setHeroData] = useState({
-    title: "Find Your Perfect Fit",
-    subtitle: "Measure yourself carefully to ensure the best fit.",
-  });
+const SizeChartSlider = ({ isOpen, onClose, descriptionHtml }) => {
+  const [activeTab, setActiveTab] = useState('body');
+  const [unit, setUnit] = useState('in');
 
-  const fetchData = useCallback(async () => {
-    if (!handle) return;
-    setLoading(true);
-    try {
-      const data = await shopify(GET_SIZE_CHARTS, { productHandle: handle });
-      const newSections = [];
+  const garmentImageUrl = useMemo(
+    () => extractGarmentImageUrl(descriptionHtml),
+    [descriptionHtml]
+  );
 
-      const productChart = normalizeChartData(data?.product?.sizeChartMetafield?.reference);
-      if (productChart) {
-        newSections.push(productChart);
-      } else {
-        const defaultChart = normalizeChartData(data?.defaultChart);
-        if (defaultChart) {
-          newSections.push(defaultChart);
-          if (defaultChart.title || defaultChart.subtitle) {
-            setHeroData(prev => ({
-              title: "Find Your Perfect Fit",
-              subtitle: defaultChart.subtitle || prev.subtitle,
-            }));
-          }
-        }
-      }
-
-      setSections(newSections);
-    } catch (error) {
-      console.error("SizeChart: fetch error", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [handle]);
-
+  // Reset state whenever the panel opens
   useEffect(() => {
-    if (isOpen) fetchData();
-  }, [isOpen, fetchData]);
+    if (isOpen) {
+      setActiveTab('body');
+      setUnit('in');
+    }
+  }, [isOpen]);
+
+  const convert = (val) => unit === 'cm' ? toCm(val) : val;
 
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -358,7 +113,7 @@ const SizeChartSlider = ({ isOpen, onClose, productHandle }) => {
                   Sizing Guide
                 </p>
                 <p className="montserrat-500 text-[10px] tracking-[0.06em] text-[#b08898] mt-0.5">
-                  All measurements in inches &amp; cms
+                  Body measurements guide
                 </p>
               </div>
             </div>
@@ -374,48 +129,150 @@ const SizeChartSlider = ({ isOpen, onClose, productHandle }) => {
             </button>
           </div>
 
+          {/* ── Tabs — only shown when product description contains an image (garment chart) ── */}
+          {garmentImageUrl && (
+            <div className="flex flex-shrink-0 border-b border-[#ede5ea]">
+              {[
+                { key: 'body',    label: 'Body Size Chart' },
+                { key: 'garment', label: 'Garment Size Chart' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveTab(key)}
+                  className={`flex-1 py-3.5 text-[10px] montserrat-600 uppercase tracking-[0.16em] transition-colors relative ${
+                    activeTab === key
+                      ? 'text-[#642c44]'
+                      : 'text-[#9e7a8a] hover:text-[#642c44]'
+                  }`}
+                >
+                  {label}
+                  {activeTab === key && (
+                    <span className="absolute bottom-0 inset-x-0 h-[2px] bg-[#642c44] rounded-t-full" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* ── Content ── */}
           <div className="flex-1 overflow-y-auto no-scrollbar">
-            {loading && sections.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 gap-4">
-                <div className="w-7 h-7 border-[3px] border-[#642c44] border-t-transparent rounded-full animate-spin" />
-                <p className="montserrat-500 text-[11px] tracking-[0.12em] uppercase text-[#b08898] animate-pulse">
-                  Loading chart…
-                </p>
-              </div>
-            ) : (
+
+            {activeTab === 'garment' && garmentImageUrl ? (
+              /* ── Garment Size Chart ── */
               <>
-                {/* Hero */}
                 <div className="px-6 pt-8 pb-6 border-b border-[#f5edf1] text-center">
                   <h3 className="cormorant-garamond-700 text-[#642c44] text-[32px] sm:text-[38px] leading-tight tracking-[0.04em] uppercase mb-3">
-                    {heroData.title}
+                    Garment Measurement
                   </h3>
                   <p className="montserrat-500 text-[11px] tracking-[0.06em] text-[#9e7a8a] max-w-sm mx-auto leading-relaxed">
-                    {heroData.subtitle}
+                    Actual size of the garment — compare with a piece you already own.
                   </p>
                 </div>
 
-                {/* How to measure tip */}
+                <div className="mx-6 mt-6 rounded-lg px-4 py-3 flex items-start gap-3" style={{ background: '#fdf8fa', border: '1px solid #f0e4ea' }}>
+                  <Ruler size={14} className="text-[#642c44] flex-shrink-0 mt-0.5" />
+                  <p className="montserrat-500 text-[10px] tracking-[0.04em] text-[#9e7a8a] leading-relaxed">
+                    These are actual garment measurements. Lay the item flat and measure to compare.
+                  </p>
+                </div>
+
+                <div className="px-6 pt-6 pb-10">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={garmentImageUrl}
+                    alt="Garment Size Chart"
+                    className="w-full h-auto rounded-lg border border-[#ede5ea]"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <p className="mt-4 px-0.5 text-[10px] text-[#b08898] montserrat-500 leading-relaxed tracking-[0.03em]">
+                    * These are actual garment measurements, not body measurements. For the best fit, compare with a garment you already own.
+                  </p>
+                </div>
+              </>
+            ) : (
+              /* ── Body Size Chart ── */
+              <>
+                <div className="px-6 pt-8 pb-6 border-b border-[#f5edf1] text-center">
+                  <h3 className="cormorant-garamond-700 text-[#642c44] text-[32px] sm:text-[38px] leading-tight tracking-[0.04em] uppercase mb-3">
+                    Find Your Perfect Fit
+                  </h3>
+                  <p className="montserrat-500 text-[11px] tracking-[0.06em] text-[#9e7a8a] max-w-sm mx-auto leading-relaxed">
+                    Measure your body for the most accurate size selection.
+                  </p>
+                </div>
+
                 <div className="mx-6 mt-6 rounded-lg px-4 py-3 flex items-start gap-3" style={{ background: '#fdf8fa', border: '1px solid #f0e4ea' }}>
                   <Info size={14} className="text-[#642c44] flex-shrink-0 mt-0.5" />
                   <p className="montserrat-500 text-[10px] tracking-[0.04em] text-[#9e7a8a] leading-relaxed">
-                    Measure your body, not over clothing. Use a soft tape measure and keep it parallel to the floor for chest and waist.
+                    Measure your body, not over clothing. Use a soft tape measure and keep it parallel to the floor for bust and hip.
                   </p>
                 </div>
 
-                {/* Chart sections */}
-                <div className="px-6 pt-6 pb-10 space-y-8">
-                  {sections.map((section) => (
-                    <SizeChartSection key={section.id} chart={section} />
-                  ))}
+                <div className="px-6 pt-6 pb-10 space-y-4">
 
-                  {!loading && sections.length === 0 && (
-                    <div className="text-center py-12">
-                      <p className="montserrat-500 text-[11px] tracking-[0.08em] uppercase text-[#b08898]">
-                        Size chart unavailable for this product.
-                      </p>
+                  {/* Section label + IN / CM toggle on same row */}
+                  <div className="flex items-center justify-between px-0.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: '#fdf0f4' }}>
+                        <Info size={12} className="text-[#642c44]" />
+                      </div>
+                      <span className="montserrat-600 text-[9px] uppercase tracking-[0.22em] text-[#9e7a8a]">
+                        Body Measurement
+                      </span>
                     </div>
-                  )}
+
+                    {/* IN / CM pill toggle */}
+                    <div className="flex items-center rounded-full border border-[#ede5ea] overflow-hidden">
+                      {(['in', 'cm']).map((u) => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setUnit(u)}
+                          className={`px-3.5 py-1.5 text-[9px] montserrat-600 uppercase tracking-[0.1em] transition-colors ${
+                            unit === u
+                              ? 'bg-[#642c44] text-white'
+                              : 'text-[#9e7a8a] hover:text-[#642c44]'
+                          }`}
+                        >
+                          {u === 'in' ? 'IN' : 'CM'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Body table */}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-[#642c44] font-black border-r border-[#ede5ea] w-16 text-center">
+                          SIZE
+                        </TableHead>
+                        {['BUST', 'WAIST', 'HIP'].map((col) => (
+                          <TableHead key={col} className="text-center">
+                            {col}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {BODY_MEASUREMENTS_IN.map((row) => (
+                        <TableRow key={row.size}>
+                          <TableCell className="font-bold text-[#642c44] bg-[#fdf8fa] border-r border-[#ede5ea] text-center tracking-[0.1em]">
+                            {row.size}
+                          </TableCell>
+                          <TableCell className="text-center">{convert(row.bust)}</TableCell>
+                          <TableCell className="text-center">{convert(row.waist)}</TableCell>
+                          <TableCell className="text-center">{convert(row.hip)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  <p className="px-0.5 text-[10px] text-[#b08898] montserrat-500 leading-relaxed tracking-[0.03em]">
+                    * All measurements are in {unit === 'in' ? 'inches' : 'centimeters'}. These are body measurements, not garment dimensions.
+                  </p>
                 </div>
               </>
             )}

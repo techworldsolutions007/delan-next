@@ -1,59 +1,82 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import React from "react";
+import React from 'react';
+import ProductCard from './ProductCard';
 
-export default function RelatedStyles({ products }) {
-  const router = useRouter();
+function normalise(p) {
+  return {
+    id: p.id,
+    handle: p.handle,
+    title: p.title,
+    imageUrl: p.featuredImage?.url ?? '',
+    altText: p.featuredImage?.altText || p.title,
+    secondImageUrl: null,
+    price: p.priceRange?.minVariantPrice?.amount ?? '0',
+    currency: p.priceRange?.minVariantPrice?.currencyCode ?? 'INR',
+    available: true,
+    variantCount: 1,
+  };
+}
 
+/**
+ * embedded=true  → compact inline variant (inside the PDP right column)
+ * embedded=false → full-width section variant (standalone page section)
+ */
+export default function RelatedStyles({ products, title = 'Pair It With', embedded = false }) {
   if (!products?.length) return null;
 
+  const cards = products.map(normalise);
+
+  if (embedded) {
+    return (
+      <div className="w-full">
+        <h2 className="cormorant-garamond-700 uppercase text-primary text-2xl mb-4 text-left">
+          {title}
+        </h2>
+        <div
+          className="grid gap-3 overflow-x-auto pb-2 no-scrollbar"
+          style={{ gridTemplateColumns: `repeat(${cards.length}, 140px)` }}
+        >
+          {cards.map((product, index) => (
+            <div key={product.id} className="min-w-0">
+              <ProductCard
+                product={product}
+                eager={index < 2}
+                showWishlistButton={false}
+                showPrice
+                showBottomAddToCartButton={false}
+                showDesktopHoverQuickAdd={false}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full">
-      {/* Decorative header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 h-px bg-black/10" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/40 montserrat-600 shrink-0">
-          Also Available As
-        </p>
-        <div className="flex-1 h-px bg-black/10" />
+    <section className="bg-white py-6 sm:py-10">
+      <div className="mx-auto max-w-7xl px-[5%]">
+        <h2 className="cormorant-garamond-700 uppercase text-primary text-3xl md:text-4xl lg:text-4xl mb-5 sm:mb-8 text-left">
+          {title}
+        </h2>
       </div>
-
-      {/* Single row blocks */}
-      <div className="flex flex-row gap-3 overflow-x-auto pb-1 scrollbar-hide">
-        {products.map((p) => {
-          const image = p.featuredImage?.url;
-          const alt = p.featuredImage?.altText || p.title;
-
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => router.push(`/products/${p.handle}`)}
-              className="group flex flex-col items-center gap-2 shrink-0"
-            >
-              {/* Square block */}
-              <div className="h-[80px] w-[80px] overflow-hidden rounded-full border border-black/[0.08] bg-neutral-100 transition-all duration-200 group-hover:border-black/20 group-hover:shadow-[0_2px_10px_rgba(0,0,0,0.08)] group-active:scale-[0.96]">
-                {image ? (
-                  <img
-                    src={image}
-                    alt={alt}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
-                    loading="lazy"
-                    draggable={false}
-                  />
-                ) : (
-                  <div className="h-full w-full bg-neutral-200" />
-                )}
-              </div>
-
-              {/* Title */}
-              <p className="w-[80px] text-center text-[10px] font-bold uppercase tracking-[0.08em] text-black/60 montserrat-600 leading-tight line-clamp-2">
-                {p.title}
-              </p>
-            </button>
-          );
-        })}
+      <div
+        className="grid gap-3 sm:gap-4 overflow-x-auto px-[5%] pb-3 no-scrollbar"
+        style={{ gridTemplateColumns: `repeat(${cards.length}, 220px)` }}
+      >
+        {cards.map((product, index) => (
+          <div key={product.id} className="min-w-0">
+            <ProductCard
+              product={product}
+              eager={index < 2}
+              showWishlistButton={false}
+              showPrice
+              showBottomAddToCartButton={false}
+              showDesktopHoverQuickAdd={false}
+            />
+          </div>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }

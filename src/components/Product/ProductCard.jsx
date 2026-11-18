@@ -109,7 +109,7 @@ export default function ProductCard({
 
   const formatPrice = (amount) => {
     const num = Number.parseFloat(amount ?? 0);
-    return Number.isFinite(num) ? `\u20B9${num.toFixed(0)}` : "\u20B90";
+    return Number.isFinite(num) ? `Rs. ${num.toFixed(0)}` : "Rs. 0";
   };
 
   const desktopCtaLabel = !product?.available

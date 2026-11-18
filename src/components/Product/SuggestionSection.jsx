@@ -113,7 +113,7 @@ function Price({ amount, code }) {
   const num = Number.parseFloat(amount ?? 0);
   return (
     <p className="montserrat-500 text-[0.95rem] text-primary">
-      ₹{Number.isFinite(num) ? num.toFixed(0) : "0"}
+      Rs. {Number.isFinite(num) ? num.toFixed(0) : "0"}
     </p>
   );
 }

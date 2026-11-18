@@ -56,6 +56,7 @@ export default function WhatsAppButton() {
   const [expanded, setExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const pathname = usePathname();
   const message = useWhatsAppMessage();
   const lastScrollY = useRef(0);
@@ -79,6 +80,15 @@ export default function WhatsAppButton() {
     };
     window.addEventListener("cart:state-change", handleCartState);
     return () => window.removeEventListener("cart:state-change", handleCartState);
+  }, []);
+
+  // Sync with Wishlist Sidebar state from Navbar
+  useEffect(() => {
+    const handleWishlistState = (e) => {
+      setWishlistOpen(!!e.detail?.open);
+    };
+    window.addEventListener("wishlist:state-change", handleWishlistState);
+    return () => window.removeEventListener("wishlist:state-change", handleWishlistState);
   }, []);
 
   // Collapse if user scrolls down/up significantly while expanded
@@ -107,8 +117,8 @@ export default function WhatsAppButton() {
     // else: follow the href link (default behavior)
   };
 
-  // Completely remove from Product page or when Cart is open
-  if (isProductPage || cartOpen) return null;
+  // Completely remove from Product page or when Cart/Wishlist is open
+  if (isProductPage || cartOpen || wishlistOpen) return null;
 
   return (
     <a

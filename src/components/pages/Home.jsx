@@ -106,14 +106,8 @@ export default function Home() {
       //   ),
       // },
 
-      // {
-      //   key: "categories-section",
-      //   minHeight: "43.75vw",
-      //   mobileMinHeight: "150vw",
-      //   render: () => <CategoriesSection />,
-      // },
       {
-        key: "categories-section-new",
+        key: "categories-section",
         minHeight: "43.75vw",
         mobileMinHeight: "150vw",
         render: () => <CategoriesSectionNew />,

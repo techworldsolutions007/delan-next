@@ -495,7 +495,7 @@ function FilterDrawer({ open, onClose, products, priceRange, availableSizes, ini
         <div className="shrink-0 px-6 py-5 border-t border-neutral-100">
           <button
             onClick={() => onApply(local)}
-            className="w-full py-4 text-white text-[11px] uppercase tracking-[0.2em] montserrat-600 transition-colors"
+            className="w-full py-4 rounded-[12px] text-white text-[11px] uppercase tracking-[0.2em] montserrat-600 transition-colors"
             style={{ backgroundColor: BRAND }}
           >
             Show {previewCount} {previewCount === 1 ? "Style" : "Styles"}

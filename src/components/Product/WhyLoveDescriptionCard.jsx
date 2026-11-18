@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getShopifyDescriptionMarkup } from "@/utils/shopifyDescription";
+import { getShopifyDescriptionMarkup, stripImagesFromHtml } from "@/utils/shopifyDescription";
 
 export default function WhyLoveDescriptionCard({
   html = "",
@@ -46,7 +46,7 @@ export default function WhyLoveDescriptionCard({
     };
   }, [html, text, alwaysExpanded]);
 
-  const markup = getShopifyDescriptionMarkup({ html, text });
+  const markup = stripImagesFromHtml(getShopifyDescriptionMarkup({ html, text }));
 
   return (
     <Card className={cardClassName}>

@@ -280,6 +280,11 @@ export default function Navbar() {
     window.dispatchEvent(new CustomEvent("cart:state-change", { detail: { open: cartOpen } }));
   }, [cartOpen]);
 
+  // Emit wishlist state to global listeners (e.g. WhatsApp button)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("wishlist:state-change", { detail: { open: wishlistOpen } }));
+  }, [wishlistOpen]);
+
   // Emit mobile menu state to global listeners (e.g. WhatsApp button)
   useEffect(() => {
     window.dispatchEvent(
@@ -501,15 +506,17 @@ export default function Navbar() {
           <button
             type="button"
             onClick={() => setWishlistOpen(true)}
-            className="relative hidden md:inline-flex items-center hover:opacity-80"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
             aria-label="Open wishlist"
           >
-            <Heart className="h-5 w-5 text-primary" />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-2 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] text-white">
-                {wishlistCount}
-              </span>
-            )}
+            <span className="relative inline-flex">
+              <Heart className="h-4 w-4 text-primary" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] text-white">
+                  {wishlistCount}
+                </span>
+              )}
+            </span>
           </button>
 
           <button

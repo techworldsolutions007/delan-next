@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -40,7 +40,6 @@ export default function CategoriesSectionNew() {
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
 
   const containerRef = useRef(null);
@@ -48,51 +47,91 @@ export default function CategoriesSectionNew() {
   const pointerIdRef = useRef(null);
   const pointerTypeRef = useRef(null);
   const wasDraggedRef = useRef(false);
-  const finalDragOffsetRef = useRef(0);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
   const lastClientRef = useRef({ x: 0, y: 0 });
+  // 'h' = locked horizontal, 'v' = locked vertical, null = undecided
+  const directionRef = useRef(null);
+  // Mirror of dragOffset state so event handlers always read the current value
+  const dragOffsetRef = useRef(0);
 
   const len = CATEGORY_SLIDES.length;
 
   const nextSlide = () => setCurrentSlide((p) => (p + 1) % len);
   const prevSlide = () => setCurrentSlide((p) => (p - 1 + len) % len);
 
+  // After isDragging becomes false, animate dragOffset back to 0 in the next frame
+  // so the transition class is restored first (avoiding an instant snap).
+  useEffect(() => {
+    if (!isDragging) {
+      const id = requestAnimationFrame(() => {
+        setDragOffset(0);
+        dragOffsetRef.current = 0;
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [isDragging]);
+
   const handlePointerDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    try { containerRef.current?.setPointerCapture(e.pointerId); } catch { }
     pointerIdRef.current = e.pointerId;
     pointerTypeRef.current = e.pointerType;
     wasDraggedRef.current = false;
-    finalDragOffsetRef.current = 0;
-    setIsDragging(true);
-    setStartX(e.clientX);
-    setDragOffset(0);
+    directionRef.current = null;
+    startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
     lastClientRef.current = { x: e.clientX, y: e.clientY };
+    dragOffsetRef.current = 0;
+    setIsDragging(true);
+    setDragOffset(0);
   };
 
   const handlePointerMove = (e) => {
-    if (!isDragging || e.pointerId !== pointerIdRef.current) return;
-    const diff = e.clientX - startX;
-    setDragOffset(diff);
-    lastClientRef.current = { x: e.clientX, y: e.clientY };
-    if (Math.abs(diff) > 6) {
+    if (e.pointerId !== pointerIdRef.current) return;
+
+    const diffX = e.clientX - startXRef.current;
+    const diffY = e.clientY - startYRef.current;
+
+    // Determine scroll direction on first significant movement
+    if (directionRef.current === null && (Math.abs(diffX) > 6 || Math.abs(diffY) > 6)) {
+      if (Math.abs(diffY) > Math.abs(diffX)) {
+        // Vertical — release pointer and let page scroll; null pointer id so Up/Cancel are ignored
+        directionRef.current = 'v';
+        try { containerRef.current?.releasePointerCapture(e.pointerId); } catch { }
+        pointerIdRef.current = null;
+        setIsDragging(false);
+        return;
+      } else {
+        // Horizontal — capture so the browser can't steal it for scrolling
+        directionRef.current = 'h';
+        try { containerRef.current?.setPointerCapture(e.pointerId); } catch { }
+      }
+    }
+
+    if (directionRef.current !== 'h') return;
+
+    if (Math.abs(diffX) > 6) {
       wasDraggedRef.current = true;
       if (e.cancelable) e.preventDefault();
     }
+
+    dragOffsetRef.current = diffX;
+    setDragOffset(diffX);
+    lastClientRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handlePointerUpOrCancel = (e) => {
-    if (pointerIdRef.current != null && e.pointerId !== pointerIdRef.current) return;
+  const handlePointerUp = (e) => {
+    // Ignore if we have no tracked pointer (happens after vertical-scroll abandonment)
+    if (pointerIdRef.current == null || e.pointerId !== pointerIdRef.current) return;
     try { containerRef.current?.releasePointerCapture(e.pointerId); } catch { }
 
+    const offset = dragOffsetRef.current;
     const threshold = 75;
-    finalDragOffsetRef.current = dragOffset;
 
-    if (dragOffset > threshold) prevSlide();
-    else if (dragOffset < -threshold) nextSlide();
-    else if (
-      !wasDraggedRef.current &&
-      Math.abs(finalDragOffsetRef.current) <= (pointerTypeRef.current === "mouse" ? 12 : 10)
-    ) {
+    if (offset > threshold) prevSlide();
+    else if (offset < -threshold) nextSlide();
+    else if (!wasDraggedRef.current) {
+      // Genuine tap — navigate to the category
       const { x, y } = lastClientRef.current;
       const clickedEl = document.elementFromPoint(x, y);
       const cardEl = clickedEl?.closest("[data-handle]");
@@ -101,20 +140,30 @@ export default function CategoriesSectionNew() {
     }
 
     setIsDragging(false);
-    setDragOffset(0);
-    setStartX(0);
     pointerIdRef.current = null;
+    directionRef.current = null;
 
     if (wasDraggedRef.current) {
       setTimeout(() => {
         wasDraggedRef.current = false;
-        finalDragOffsetRef.current = 0;
         pointerTypeRef.current = null;
       }, 220);
     } else {
       pointerTypeRef.current = null;
-      finalDragOffsetRef.current = 0;
+      wasDraggedRef.current = false;
     }
+  };
+
+  // pointercancel = browser took over (native scroll, phone call, etc.) — only clean up, never navigate
+  const handlePointerCancel = (e) => {
+    if (pointerIdRef.current == null || e.pointerId !== pointerIdRef.current) return;
+    try { containerRef.current?.releasePointerCapture(e.pointerId); } catch { }
+    setIsDragging(false);
+    dragOffsetRef.current = 0;
+    pointerIdRef.current = null;
+    directionRef.current = null;
+    wasDraggedRef.current = false;
+    pointerTypeRef.current = null;
   };
 
   const getSlidePosition = (slideId) => {
@@ -134,14 +183,14 @@ export default function CategoriesSectionNew() {
   };
 
   return (
-    <section className="w-full bg-white px-3 pt-10 pb-0 md:px-[5%] md:pt-14 md:pb-0 overflow-hidden">
+    <section className="w-full bg-white px-3 pt-6 pb-6 md:px-[5%] md:pt-10 md:pb-10 overflow-hidden">
       <SectionHeader
         title="CATEGORIES"
         subtitle="Shop by your mood & moment"
         className="relative z-20 mb-6 md:mb-8"
       />
 
-      <div className="w-full flex items-center justify-center px-4 pt-16 pb-6 md:px-0 md:pt-10 md:pb-6 lg:pt-12 lg:pb-6">
+      <div className="w-full flex items-center justify-center px-4 pt-16 pb-6 md:px-0 md:py-10 lg:py-12">
         <div className="w-full max-w-[1800px]">
           <div className="relative">
             <div className="flex items-center gap-3 md:gap-6 lg:gap-8">
@@ -159,25 +208,31 @@ export default function CategoriesSectionNew() {
               {/* Slides */}
               <div
                 ref={containerRef}
-                className="flex-1 relative h-64 sm:h-72 md:h-80 overflow-visible select-none"
-                style={{ cursor: isDragging ? "grabbing" : "grab", touchAction: "none", userSelect: "none" }}
+                className="flex-1 relative h-64 sm:h-72 md:h-80 lg:h-90 overflow-visible select-none"
+                style={{
+                  cursor: isDragging && directionRef.current === 'h' ? "grabbing" : "grab",
+                  // pan-y: browser owns vertical scroll; we handle horizontal
+                  touchAction: "pan-y",
+                  userSelect: "none",
+                }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUpOrCancel}
-                onPointerCancel={handlePointerUpOrCancel}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <div className="absolute inset-0 flex items-center justify-center">
                   {CATEGORY_SLIDES.map((slide) => {
                     const position = getSlidePosition(slide.id);
                     const isCenter = position === "center";
+                    const isActive = isDragging && directionRef.current === 'h';
 
                     return (
                       <div
                         key={slide.id}
-                        className={`absolute ${isDragging ? "transition-none" : "transition-all duration-700 ease-in-out"} ${
+                        className={`absolute ${isActive ? "transition-none" : "transition-all duration-700 ease-in-out"} ${
                           isCenter
-                            ? "w-[90%] sm:w-[35%] md:w-[45%] lg:w-[45%] h-64 sm:h-80 md:h-96 opacity-100 scale-100 z-20"
+                            ? "w-[90%] sm:w-[35%] md:w-[45%] lg:w-[45%] h-90 sm:h-80 md:h-90 lg:h-100 opacity-100 scale-100 z-20"
                             : position === "left" || position === "right"
                             ? "w-[40%] sm:w-[35%] md:w-[32%] lg:w-[38%] h-48 sm:h-56 md:h-64 lg:h-80 scale-90 z-10"
                             : "w-[30%] h-48 opacity-0 scale-75 pointer-events-none"
@@ -213,7 +268,7 @@ export default function CategoriesSectionNew() {
                                 alt={slide.title}
                                 loading="lazy"
                                 decoding="async"
-                                className="h-full w-full object-cover object-center transition-all duration-700"
+                                className="h-full w-full object-cover object-center"
                                 draggable="false"
                               />
                             </picture>

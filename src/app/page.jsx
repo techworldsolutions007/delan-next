@@ -5,7 +5,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://delan.in';
 export const revalidate = 3600;
 
 export const metadata = {
-  title: 'Women\'s Fashion India | Co-ord Sets, Dresses & Ethnic Wear',
+  title: 'DELAN',
   description: 'Shop Delan\'s premium women\'s fashion online. Discover co-ord sets, floral dresses, ethnic wear & contemporary styles. COD available. Fast shipping across India.',
   alternates: { canonical: SITE_URL },
   openGraph: {

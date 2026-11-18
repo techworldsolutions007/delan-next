@@ -4,13 +4,11 @@ import { useParams } from 'next/navigation';
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import ProductHeader from "../Product/ProductHeader";
 import LazySection from "@/components/LazySection";
-
 import MobileAddToCartCTA from "@/components/Product/MobileAddToCartCTA";
 import ProductUGCVideoPopup from "@/components/ProductUGCVideoPopup/ProductUGCVideoPopup";
 import { rememberRecentlyViewedHandle } from "@/lib/recentlyViewedStore";
 
 const ProductUSP = React.lazy(() => import("../Product/ProductUSP"));
-const CuratedCollections = React.lazy(() => import("../home/CuratedCollections"));
 const SuggestionSection = React.lazy(() => import("../Product/SuggestionSection"));
 const RecentlyViewed = React.lazy(() => import("../Product/RecentlyViewed"));
 const ProductReview = React.lazy(() => import("../Product/ProductReview"));
@@ -22,13 +20,6 @@ const PRODUCT_SECTION_CONFIG = [
     mobileMinHeight: "140px",
     rootMargin: "350px 0px",
     render: () => <ProductUSP />,
-  },
-  {
-    key: "curated-collections",
-    minHeight: "60vh",
-    mobileMinHeight: "220px",
-    rootMargin: "350px 0px",
-    render: () => <CuratedCollections />,
   },
   {
     key: "suggestions",

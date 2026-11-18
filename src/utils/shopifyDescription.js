@@ -58,3 +58,14 @@ export function getShopifyDescriptionMarkup({ html = "", text = "" } = {}) {
 
   return normalizeShopifyDescriptionHtml(source);
 }
+
+/** Remove all <img> elements from description HTML so images don't show in the description section. */
+export function stripImagesFromHtml(html = "") {
+  if (!html) return html;
+  if (typeof document !== "undefined" && typeof DOMParser !== "undefined") {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll("img").forEach((img) => img.remove());
+    return doc.body.innerHTML;
+  }
+  return html.replace(/<img[^>]*>/gi, "");
+}

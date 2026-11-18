@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const SLIDES = [
   {
@@ -128,11 +129,14 @@ export default function CategoriesSection() {
     touchStartX.current = null;
   };
 
-  // Show CSS-driven skeleton until JS determines screen width — prevents blank flash on mobile
   if (visibleCount === null) {
     return (
       <section className="w-full pt-10 md:pt-14">
-        <div className="w-full bg-neutral-100 animate-pulse h-[150vw] md:h-[56vw] lg:h-[43.75vw]" />
+        <div className="flex w-full overflow-hidden h-[150vw] md:h-[56vw] lg:h-[43.75vw]">
+          <Skeleton className="flex-shrink-0 w-full md:w-1/2 lg:w-1/3 h-full rounded-none" />
+          <Skeleton className="flex-shrink-0 hidden md:block md:w-1/2 lg:w-1/3 h-full rounded-none" />
+          <Skeleton className="flex-shrink-0 hidden lg:block lg:w-1/3 h-full rounded-none" />
+        </div>
       </section>
     );
   }
@@ -171,29 +175,15 @@ export default function CategoriesSection() {
                 className="block h-full w-full relative group overflow-hidden rounded-none"
                 draggable="false"
               >
-                {/* Mobile image — hidden on md+ */}
                 <Image
-                  src={slide.imageMobile || slide.image}
+                  src={visibleCount === 1 ? (slide.imageMobile || slide.image) : slide.image}
                   alt={slide.title}
                   fill
-                  className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03] md:hidden"
+                  sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 33vw"
+                  className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
                   draggable="false"
                   priority={i >= CLONE_COUNT && i < CLONE_COUNT + n}
                 />
-                {/* Desktop image — hidden below md */}
-                <Image
-                  src={slide.image}
-                  alt={slide.title}
-                  fill
-                  className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03] hidden md:block"
-                  draggable="false"
-                  priority={i >= CLONE_COUNT && i < CLONE_COUNT + n}
-                />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent pt-14 pb-5 px-5 z-10">
-                  <span className="text-white text-xs font-bold tracking-[0.16em] uppercase drop-shadow-sm">
-                    {slide.title}
-                  </span>
-                </div>
               </Link>
             </div>
           ))}

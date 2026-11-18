@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import React, { useState, useEffect, useCallback } from "react";
 import { Drawer } from "vaul";
-import { X, ShoppingBag, Loader2, Check, Ruler } from "lucide-react";
+import { X, ShoppingBag, Loader2, Check, Ruler, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { shopify } from "@/lib/shopify";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ const GET_PRODUCT_QUICK_BUY = /* GraphQL */ `
           }
         }
       }
-      images(first: 1) {
+      images(first: 10) {
         edges {
           node {
             url
@@ -94,6 +94,7 @@ export default function QuickBuyDrawer() {
   const [adding, setAdding] = useState(false);
   const [buying, setBuying] = useState(false);
   const [gokwikReady, setGokwikReady] = useState(false);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
   const isMobile = useIsMobile();
   const router = useRouter();
 
@@ -164,6 +165,11 @@ export default function QuickBuyDrawer() {
     },
     []
   );
+
+  // Reset image index when product changes
+  useEffect(() => {
+    if (isOpen) setActiveImageIdx(0);
+  }, [isOpen, product?.handle]);
 
   // Fetch full details when opened
   useEffect(() => {
@@ -288,128 +294,203 @@ export default function QuickBuyDrawer() {
 
   if (!product) return null;
 
-  const content = (
-    <>
-      {isMobile && <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-neutral-200 my-4" />}
-      
-      <div className={`px-6 pb-10 overflow-y-auto ${!isMobile ? "pt-6 max-h-[85vh] no-scrollbar" : ""}`}>
-        {/* Header */}
-        <div className="flex gap-4 mb-6">
-          <div className="relative w-24 h-32 rounded-xl overflow-hidden bg-rose-50 flex-shrink-0">
-            {(product.imageUrl || details?.images?.edges[0]?.node?.url) && (
-              <Image
-                src={product.imageUrl || details?.images?.edges[0]?.node?.url}
-                alt={product.title}
-                fill
-                className="object-cover"
-              />
-            )}
-          </div>
-          <div className="flex flex-col justify-center gap-1">
-            <h2 
-              className="cormorant-garamond-700 text-2xl text-primary leading-tight tracking-[0.025em] uppercase cursor-pointer hover:underline"
-              onClick={() => {
-                closeQuickBuy();
-                router.push(`/products/${details?.handle || product.handle}`);
-              }}
-            >
-              {product.title}
-            </h2>
-            <p className="montserrat-600 text-lg leading-snug tracking-[0.05em]" style={{ color: BRAND }}>
-              ₹{Number(product.price).toFixed(0)}
-            </p>
-          </div>
+  const images = details?.images?.edges?.map((e) => e.node) ??
+    (product.imageUrl ? [{ url: product.imageUrl, altText: product.title }] : []);
+  const activeImage = images[activeImageIdx] ?? images[0];
+
+  const prevImage = () => setActiveImageIdx((i) => (i - 1 + images.length) % images.length);
+  const nextImage = () => setActiveImageIdx((i) => (i + 1) % images.length);
+
+  /* ---- shared sub-panels ---- */
+
+  const imagePanel = (
+    <div className="relative h-full w-full overflow-hidden bg-neutral-100">
+      {activeImage?.url && (
+        <Image
+          src={activeImage.url}
+          alt={activeImage.altText || product.title}
+          fill
+          className="object-cover"
+          priority
+        />
+      )}
+      {images.length > 1 && (
+        <>
           <button
-            onClick={closeQuickBuy}
-            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-colors self-start mt-0.5"
-            style={{ background: '#f0f4f8', color: '#642c44' }}
-            aria-label="Close"
-            >
-              <X size={16} />
+            onClick={prevImage}
+            aria-label="Previous image"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white/75 backdrop-blur-sm shadow-sm hover:bg-white transition-colors"
+            style={{ color: '#642c44' }}
+          >
+            <ChevronLeft size={16} strokeWidth={2} />
           </button>
-        </div>
-
-        {loading ? (
-          <div className="space-y-6">
-            <Skeleton className="h-6 w-32 mb-4" />
-            <div className="flex gap-3">
-              <Skeleton className="h-12 w-16" />
-              <Skeleton className="h-12 w-16" />
-              <Skeleton className="h-12 w-16" />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {details?.options?.map((opt) => (
-              <div key={opt.id} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs uppercase tracking-[0.15em] leading-snug text-neutral-400 font-bold montserrat-600">
-                    Select {opt.name}
-                  </label>
-                  {opt.name.toLowerCase().includes("size") && (
-                    <button 
-                      onClick={() => setIsSizeChartOpen(true)}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] leading-snug text-primary/70 hover:text-primary transition-colors montserrat-600"
-                    >
-                      <Ruler size={14} />
-                      Size Guide
-                    </button>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap gap-3">
-                  {opt.values.map((val) => {
-                    const active = selectedOptions[opt.name] === val;
-                    return (
-                      <button
-  key={val}
-  onClick={() => setSelectedOptions(prev => ({ ...prev, [opt.name]: val }))}
-  className={`
-    h-11 px-3 min-w-[44px] rounded-[8px] border transition-all duration-150 montserrat-600 text-[11px] uppercase tracking-[0.12em]
-    ${active
-      ? "border-[#642c44] bg-[#642c44] text-white scale-105"
-      : "border-neutral-200 bg-white text-neutral-600 hover:border-[#642c44]/40 hover:text-[#642c44]"
-    }
-  `}
->
-  {val}
-</button>
-                    );
-                  })}
-                </div>
-              </div>
+          <button
+            onClick={nextImage}
+            aria-label="Next image"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white/75 backdrop-blur-sm shadow-sm hover:bg-white transition-colors"
+            style={{ color: '#642c44' }}
+          >
+            <ChevronRight size={16} strokeWidth={2} />
+          </button>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveImageIdx(i)}
+                aria-label={`Image ${i + 1}`}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeImageIdx ? 'bg-white scale-125' : 'bg-white/50'}`}
+              />
             ))}
-
-            {/* Actions */}
-            <div className="flex flex-col gap-3 mt-4">
-               <Button
-                  onClick={handleBuyNow}
-                  disabled={!selectedVariant?.availableForSale || buying}
-                  className="h-[52px] w-full rounded-[10px] montserrat-700 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                  style={{ backgroundColor: '#642c44', color: '#eef4f8' }}
-                >
-                  {buying
-                    ? <Loader2 size={16} className="animate-spin" />
-                    : <><ArrowRight size={15} className="opacity-80" />Buy Now</>}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleAddToCart}
-                  disabled={!selectedVariant?.availableForSale || adding}
-                  className="h-[52px] w-full rounded-[10px] montserrat-700 text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                  style={{ borderWidth: '1.5px', borderColor: '#642c44', color: '#642c44' }}
-                >
-                  {adding
-                    ? <Loader2 size={16} className="animate-spin" />
-                    : <><ShoppingBag size={15} className="opacity-80" />Add to Bag</>}
-                </Button>
-            </div>
           </div>
-        )}
+        </>
+      )}
+    </div>
+  );
+
+  const optionsAndActions = (
+    <>
+      {loading ? (
+        <div className="space-y-5">
+          <Skeleton className="h-5 w-28" />
+          <div className="flex gap-2 flex-wrap">
+            <Skeleton className="h-10 w-14" />
+            <Skeleton className="h-10 w-14" />
+            <Skeleton className="h-10 w-14" />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {details?.options?.map((opt) => (
+            <div key={opt.id} className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] uppercase tracking-[0.15em] text-neutral-400 font-bold montserrat-600">
+                  Select {opt.name}
+                </label>
+                {opt.name.toLowerCase().includes("size") && (
+                  <button
+                    onClick={() => setIsSizeChartOpen(true)}
+                    className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary/70 hover:text-primary transition-colors montserrat-600"
+                  >
+                    <Ruler size={13} />
+                    Size Guide
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {opt.values.map((val) => {
+                  const active = selectedOptions[opt.name] === val;
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => setSelectedOptions((prev) => ({ ...prev, [opt.name]: val }))}
+                      className={`h-9 px-3 min-w-[40px] rounded-[6px] border transition-all duration-150 montserrat-600 text-[11px] uppercase tracking-[0.1em] ${
+                        active
+                          ? 'border-[#642c44] bg-[#642c44] text-white'
+                          : 'border-neutral-200 bg-white text-neutral-600 hover:border-[#642c44]/40 hover:text-[#642c44]'
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div className="flex flex-col gap-2.5 pt-1">
+            <Button
+              onClick={handleBuyNow}
+              disabled={!selectedVariant?.availableForSale || buying}
+              className="h-12 w-full rounded-[8px] montserrat-700 text-[11px] uppercase tracking-[0.18em] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              style={{ backgroundColor: '#642c44', color: '#eef4f8' }}
+            >
+              {buying ? <Loader2 size={15} className="animate-spin" /> : <><ArrowRight size={14} className="opacity-80" />Buy Now</>}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleAddToCart}
+              disabled={!selectedVariant?.availableForSale || adding}
+              className="h-12 w-full rounded-[8px] montserrat-700 text-[11px] uppercase tracking-[0.18em] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+              style={{ borderWidth: '1.5px', borderColor: '#642c44', color: '#642c44' }}
+            >
+              {adding ? <Loader2 size={15} className="animate-spin" /> : <><ShoppingBag size={14} className="opacity-80" />Add to Bag</>}
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  /* ---- mobile: stacked ---- */
+  const mobileContent = (
+    <>
+      <div className="mx-auto w-12 h-1.5 rounded-full bg-neutral-200 mt-3 mb-0 flex-shrink-0" />
+      <div className="relative w-full flex-shrink-0 overflow-hidden bg-neutral-100" style={{ aspectRatio: '3/4', maxHeight: '45vh' }}>
+        {imagePanel}
+        <button
+          onClick={closeQuickBuy}
+          aria-label="Close"
+          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-colors"
+          style={{ color: '#642c44' }}
+        >
+          <X size={16} strokeWidth={2.5} />
+        </button>
+      </div>
+      <div className="px-5 pt-4 pb-8 overflow-y-auto no-scrollbar flex-1">
+        <h2
+          className="cormorant-garamond-700 text-2xl text-primary leading-tight tracking-[0.025em] uppercase cursor-pointer hover:underline mb-0.5"
+          onClick={() => { closeQuickBuy(); router.push(`/products/${details?.handle || product.handle}`); }}
+        >
+          {product.title}
+        </h2>
+        <p className="montserrat-600 text-lg tracking-[0.05em] mb-4" style={{ color: BRAND }}>
+          Rs. {Number(product.price).toFixed(0)}
+        </p>
+        {optionsAndActions}
       </div>
     </>
   );
+
+  /* ---- desktop: side-by-side ---- */
+  const desktopContent = (
+    <div className="flex h-full">
+      {/* Left — image */}
+      <div className="relative w-[48%] flex-shrink-0">
+        {imagePanel}
+      </div>
+
+      {/* Right — info + actions */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Close button top-right */}
+        <div className="flex justify-end px-5 pt-4 flex-shrink-0">
+          <button
+            onClick={closeQuickBuy}
+            aria-label="Close"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-neutral-200 transition-colors"
+            style={{ color: '#642c44' }}
+          >
+            <X size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="px-5 pb-6 overflow-y-auto no-scrollbar flex-1">
+          <h2
+            className="cormorant-garamond-700 text-2xl text-primary leading-tight tracking-[0.025em] uppercase cursor-pointer hover:underline mb-1"
+            onClick={() => { closeQuickBuy(); router.push(`/products/${details?.handle || product.handle}`); }}
+          >
+            {product.title}
+          </h2>
+          <p className="montserrat-600 text-xl tracking-[0.05em] mb-5" style={{ color: BRAND }}>
+            Rs. {Number(product.price).toFixed(0)}
+          </p>
+          {optionsAndActions}
+        </div>
+      </div>
+    </div>
+  );
+
+  const content = isMobile ? mobileContent : desktopContent;
 
   return (
     <>
@@ -423,7 +504,7 @@ export default function QuickBuyDrawer() {
           <Drawer.Portal>
             <Drawer.Overlay className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[100]" />
             <Drawer.Content 
-              className="bg-white flex flex-col rounded-t-xl h-auto max-h-[92vh] fixed bottom-0 left-0 right-0 z-[101] outline-none shadow-2xl"
+              className="bg-white flex flex-col rounded-t-xl h-auto max-h-[92vh] fixed bottom-0 left-0 right-0 z-[101] outline-none shadow-2xl overflow-hidden"
               onInteractOutside={(e) => {
                 if (isSizeChartOpen) {
                   e.preventDefault();
@@ -444,7 +525,7 @@ export default function QuickBuyDrawer() {
         >
           <DialogContent 
             showCloseButton={false} 
-            className="sm:max-w-md p-0 overflow-hidden rounded-xl"
+            className="sm:max-w-[620px] w-full p-0 overflow-hidden rounded-xl h-[560px]"
             onInteractOutside={(e) => {
               if (isSizeChartOpen) {
                 e.preventDefault();

@@ -20,6 +20,7 @@ import { Star, CheckCircle2 } from "lucide-react";
 import {
   escapeHtml,
   normalizeShopifyDescriptionHtml,
+  stripImagesFromHtml,
 } from "@/utils/shopifyDescription";
 
 const BRAND = "var(--brand-642, #642c44)";
@@ -155,7 +156,9 @@ export default function WhyLoveAndDetails({
         const p = data?.product;
         if (!p) throw new Error("Product not found.");
 
-        const html = normalizeShopifyDescriptionHtml(p?.descriptionHtml || pickDescription(p));
+        const html = stripImagesFromHtml(
+          normalizeShopifyDescriptionHtml(p?.descriptionHtml || pickDescription(p))
+        );
 
         if (!cancelled) {
           setLoveHtml(html || "<p>No description available.</p>");

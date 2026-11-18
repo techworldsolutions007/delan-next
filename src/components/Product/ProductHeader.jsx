@@ -12,6 +12,8 @@ import { ChevronLeft, ChevronRight, Heart, Ruler } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SizeChartSlider from "./SizeChartSlider";
 import CouponCarousel, { DEFAULT_COUPONS } from "./CouponCarousel";
+import RelatedStyles from "./RelatedStyles";
+
 import ProductImageModal from "./ProductImageModal";
 import WhyLoveDescriptionCard from "./WhyLoveDescriptionCard";
 import WhyLoveAndDetails from "./WhyLoveAndDetails";
@@ -309,6 +311,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
   const [buying, setBuying] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
   const [gokwikReady, setGokwikReady] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   /* ------------------------ GoKwik: init SDK once ------------------------ */
   useEffect(() => {
@@ -549,6 +552,38 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
         const val = data?.product?.fitType?.value;
         if (!cancelled && val) setFitType(val);
       } catch { /* silent fallback */ }
+    })();
+    return () => { cancelled = true; };
+  }, [handle]);
+
+  useEffect(() => {
+    if (!handle) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const RELATED_STYLES_QUERY = `
+          query getRelatedStyles($handle: String!) {
+            product(handle: $handle) {
+              metafield(namespace: "custom", key: "related_styles") {
+                references(first: 5) {
+                  nodes {
+                    ... on Product {
+                      id
+                      title
+                      handle
+                      featuredImage { url altText }
+                      priceRange { minVariantPrice { amount currencyCode } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `;
+        const data = await shopify(RELATED_STYLES_QUERY, { handle });
+        const nodes = data?.product?.metafield?.references?.nodes ?? [];
+        if (!cancelled) setRelatedProducts(nodes);
+      } catch { /* silent — non-critical */ }
     })();
     return () => { cancelled = true; };
   }, [handle]);
@@ -1225,7 +1260,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                       aria-pressed={activeImg === i}
                       className={[
                         "relative inline-flex flex-none items-center justify-center",
-                        "w-[64px] md:w-full aspect-[3/4] rounded-[8px] overflow-hidden border-[1.5px] transition-all duration-200",
+                        "w-[64px] md:w-full aspect-[3/4] rounded-none overflow-hidden border-[1.5px] transition-all duration-200",
                         activeImg === i
                           ? "z-10"
                           : "border-transparent",
@@ -1252,7 +1287,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
             {/* Main image container */}
             <div
               ref={containerRef}
-              className={`flex-1 overflow-hidden relative flex justify-center items-center bg-neutral-50/50 rounded-sm ${isMobileOrTablet ? "" : "cursor-none"}`}
+              className={`flex-1 overflow-hidden relative flex justify-center items-center bg-neutral-50/50 rounded-none ${isMobileOrTablet ? "" : "cursor-none"}`}
               style={{
                 touchAction: isMobileOrTablet ? "pan-y" : "none",
                 aspectRatio: "3/4"
@@ -1418,9 +1453,6 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                 <p className={`${fitType ? "mt-0" : "mt-1"} text-sm sm:text-base text-muted-foreground montserrat-500 tracking-[0.05em] uppercase`}>
                   Designed for Timeless Elegance
                 </p>
-
-
- 
               </div>
 
               {/* Price + rating */}
@@ -1743,6 +1775,12 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
                 ))}
               </ul>
 
+              <RelatedStyles
+                products={relatedProducts}
+                embedded
+                title={/set/i.test(product?.title ?? '') ? 'Buy Separately' : 'Pair It With'}
+              />
+
               <CouponCarousel coupons={DEFAULT_COUPONS} />
 
               <WhyLoveDescriptionCard
@@ -1791,7 +1829,7 @@ export default function ProductHeader({ handle: handleProp, onAddToCart, onCtaCh
         </div>
       </section>
 
-      <SizeChartSlider isOpen={isSizeChartOpen} onClose={() => setIsSizeChartOpen(false)} />
+      <SizeChartSlider isOpen={isSizeChartOpen} onClose={() => setIsSizeChartOpen(false)} descriptionHtml={product?.descriptionHtml} />
 
       <ProductImageModal
         isOpen={isModalOpen}

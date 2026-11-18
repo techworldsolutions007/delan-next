@@ -1,76 +1,147 @@
 'use client';
 import Link from 'next/link';
-
-//&& src/components/HeroSlider.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { shopify } from '@/lib/shopify';
 
-const MOBILE_VIDEO =
-  // "https://cdn.shopify.com/videos/c/o/v/655f320b8f7149ebb1e30eaa7d611877.mp4";
-  // "https://cdn.shopify.com/videos/c/o/v/bf48e08356fd4d7d971f8a3a66131122.mp4";   // old shoot image
-  // "https://cdn.shopify.com/videos/c/o/v/2301102dcccc46d9a9fd00bfe01c6e09.mp4";
-  // "https://cdn.shopify.com/videos/c/o/v/e6c4c617312b438d862261d0ede59200.mp4"     ; // NEW SHOOT 2026 SUMMER SOMEWHERE
-  "https://cdn.shopify.com/videos/c/o/v/b6edf78cefac48269f175b09c93349cf.mp4";     // summer somewhere lauch 
-const DESKTOP_VIDEO =
-  // "https://cdn.shopify.com/videos/c/o/v/bc515a0e925647a392419c54cd24acee.mp4";    // old video
-  // "https://cdn.shopify.com/videos/c/o/v/5339c77954034e89bba4677491c5ef0c.mp4";     // GGN shoot
-  // "https://cdn.shopify.com/videos/c/o/v/a2692ce6533142bb84f9a4583d12cade.mp4";    // 21:9 FLY
-// "https://cdn.shopify.com/videos/c/o/v/b9d3b32ed547424e8339851ee5ceacef.mp4";   // 16: 9 FLY
-// "https://cdn.shopify.com/videos/c/o/v/83c8e215ec98410aad0325571090e4bf.mp4";   // NEW SHOOT 2026 SUMMER SOMEWHERE
-"https://cdn.shopify.com/videos/c/o/v/f849721f47a942a5bd6850ffb627e23e.mp4";     // summer somewhere lauch 
+// Media order in the Shopify product:
+//   [0] desktop_video     — PC/desktop video source
+//   [1] desktop_thumbnail — poster shown on desktop while video loads
+//   [2] mobile_video      — mobile video source
+//   [3] mobile_thumbnail  — poster shown on mobile while video loads
+const HERO_PRODUCT_HANDLE = 'herovidsectionforthemobileandpc';
 
+// Fallback URLs used while the fetch is in-flight or if it fails
+const FALLBACK_DESKTOP = "https://cdn.shopify.com/videos/c/o/v/f849721f47a942a5bd6850ffb627e23e.mp4";
+const FALLBACK_MOBILE  = "https://cdn.shopify.com/videos/c/o/v/b6edf78cefac48269f175b09c93349cf.mp4";
+// Fallback href: product not live → keep old collection
+const FALLBACK_HREF = '/collections/summer-somewhere';
+// Active href: product is live → point to current campaign
+const ACTIVE_HREF   = '/collections/second-skin';
 
+const GET_HERO_MEDIA = `
+  query GetHeroMedia($handle: String!) {
+    product(handle: $handle) {
+      media(first: 4) {
+        nodes {
+          ... on Video {
+            sources { url mimeType }
+          }
+          ... on MediaImage {
+            image { url }
+          }
+        }
+      }
+    }
+  }
+`;
 
-// 📝 Adjust these ratios to fit your video content perfectly without cropping
-// Common options:
-//   Desktop → "21/9" (cinematic, shortest), "16/9" (standard), "4/3" (taller)
-//   Mobile  → "4/5" (balanced portrait), "1/1" (square), "9/16" (full tall)
-const VIDEO_RATIO_MOBILE = "9/16";   // balanced portrait on mobile
-const VIDEO_RATIO_DESKTOP = "21/9"; // cinematic ultrawide – much shorter height
+function getMp4Url(sources) {
+  if (!sources?.length) return null;
+  return (
+    sources.find(s => s.mimeType === 'video/mp4')?.url ??
+    sources[0]?.url ??
+    null
+  );
+}
+
+const VIDEO_RATIO_MOBILE  = "9/16";
+const VIDEO_RATIO_DESKTOP = "21/9";
 
 const HERO_POSTER =
-  // "https://cdn.shopify.com/s/files/1/0714/4420/1639/files/frame-96.jpg?v=1782459615";
-  "https://cdn.shopify.com/s/files/1/0714/4420/1639/files/WhatsApp_Image_2026-07-13_at_1.10.42_PM.jpg?v=1783928461"
+  "https://cdn.shopify.com/s/files/1/0714/4420/1639/files/WhatsApp_Image_2026-07-13_at_1.10.42_PM.jpg?v=1783928461";
 
 function detectIOS() {
   if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent || "";
-  return /iPhone|iPad|iPod/i.test(ua);
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
 }
 
 export default function HeroSlider() {
-  const [isIOS, setIsIOS] = useState(false);
-  const videoRef = useRef(null);
+  const [isIOS, setIsIOS]           = useState(false);
+  const [desktopSrc, setDesktopSrc] = useState(FALLBACK_DESKTOP);
+  const [mobileSrc, setMobileSrc]   = useState(FALLBACK_MOBILE);
+  const [poster, setPoster]         = useState(HERO_POSTER);
+  const [shopNowHref, setShopNowHref] = useState(FALLBACK_HREF);
+  const videoRef    = useRef(null);
+  const didFetchRef = useRef(false);
+  const isIOSRef    = useRef(false);
 
-  // Detect iOS only on client
+  useEffect(() => {
+    isIOSRef.current = isIOS;
+  }, [isIOS]);
+
+  // iOS detection (client-only)
   useEffect(() => {
     setIsIOS(detectIOS());
   }, []);
 
-  // Kick off autoplay AFTER a small delay so CDN can serve other assets first
+  // Fetch media + collection redirect from the Shopify product
+  useEffect(() => {
+    shopify(GET_HERO_MEDIA, { handle: HERO_PRODUCT_HANDLE })
+      .then(data => {
+        const product = data?.product;
+
+        // Storefront API returns null for unpublished products.
+        // If product is live, switch the Shop Now link to the active campaign.
+        if (product) {
+          setShopNowHref(ACTIVE_HREF);
+        }
+
+        const nodes = product?.media?.nodes ?? [];
+
+        const desktop_video     = nodes[0];
+        const desktop_thumbnail = nodes[1];
+        const mobile_video      = nodes[2];
+        const mobile_thumbnail  = nodes[3];
+
+        const d = getMp4Url(desktop_video?.sources);
+        const m = getMp4Url(mobile_video?.sources);
+
+        // Pick the right thumbnail based on the current viewport
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+        const p = isMobile
+          ? (mobile_thumbnail?.image?.url  ?? desktop_thumbnail?.image?.url ?? null)
+          : (desktop_thumbnail?.image?.url ?? mobile_thumbnail?.image?.url  ?? null);
+
+        if (d || m) {
+          if (d) setDesktopSrc(d);
+          if (m) setMobileSrc(m);
+          didFetchRef.current = true;
+        }
+        if (p) setPoster(p);
+      })
+      .catch(() => {
+        // Fetch failed — fallbacks (URLs + href) stay as-is
+      });
+  }, []);
+
+  // Initial autoplay (runs on mount with the fallback URLs)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
-    // Give iOS a bit more time before we start pulling 100+ MB
-    const delay = isIOS ? 1500 : 500; // ms
-
-    const timer = setTimeout(() => {
-      // For safety, ensure it's muted & inline (iOS requirement for autoplay)
+    const delay = isIOS ? 1500 : 500;
+    const t = setTimeout(() => {
       video.muted = true;
       video.playsInline = true;
-
-      // Start loading & playing
-      const playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {
-          // If autoplay fails (rare), do nothing – poster will stay visible
-        });
-      }
+      video.play()?.catch(() => {});
     }, delay);
-
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [isIOS]);
+
+  // Reload + re-play whenever fetched URLs replace the fallbacks
+  useEffect(() => {
+    if (!didFetchRef.current) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video.load();
+    const delay = isIOSRef.current ? 1200 : 200;
+    const t = setTimeout(() => {
+      video.muted = true;
+      video.playsInline = true;
+      video.play()?.catch(() => {});
+    }, delay);
+    return () => clearTimeout(t);
+  }, [desktopSrc, mobileSrc]);
 
   return (
     <div
@@ -79,10 +150,7 @@ export default function HeroSlider() {
       aria-roledescription="carousel"
       aria-live="polite"
       className="relative w-full overflow-hidden bg-neutral-100 group"
-      style={{
-        aspectRatio: VIDEO_RATIO_MOBILE,
-        height: 'auto'
-      }}
+      style={{ aspectRatio: VIDEO_RATIO_MOBILE, height: 'auto' }}
     >
       <style>{`
         @media (min-width: 768px) {
@@ -91,6 +159,7 @@ export default function HeroSlider() {
           }
         }
       `}</style>
+
       <video
         ref={videoRef}
         className="absolute inset-0 h-full w-full object-cover"
@@ -99,28 +168,18 @@ export default function HeroSlider() {
         playsInline
         autoPlay
         preload={isIOS ? "none" : "metadata"}
-        poster={HERO_POSTER}
+        poster={poster}
         controls={false}
         disablePictureInPicture
         aria-label="Delan hero video"
         suppressHydrationWarning
       >
-        {/* Desktop / Tablet source */}
-        <source
-          src={DESKTOP_VIDEO}
-          type="video/mp4"
-          media="(min-width: 768px)"
-        />
-        {/* Mobile source */}
-        <source
-          src={MOBILE_VIDEO}
-          type="video/mp4"
-          media="(max-width: 767px)"
-        />
+        <source src={desktopSrc} type="video/mp4" media="(min-width: 768px)" />
+        <source src={mobileSrc}  type="video/mp4" media="(max-width: 767px)" />
         Your browser does not support the video tag.
       </video>
 
-      {/* Bottom Shade/Gradient Overlay */}
+      {/* Bottom gradient overlay */}
       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent pointer-events-none transition-opacity duration-300 group-hover:from-black/60" />
 
       {/* CTA */}
@@ -133,7 +192,7 @@ export default function HeroSlider() {
           asChild
           className="montserrat-700 uppercase leading-snug tracking-[0.3em] py-5 px-5 text-[14px] md:text-[15px] border border-white bg-transparent text-white hover:bg-white hover:text-primary transition-all duration-300 shadow-lg"
         >
-          <Link href="/collections/summer-somewhere">
+          <Link href={shopNowHref}>
             Shop Now
           </Link>
         </Button>
