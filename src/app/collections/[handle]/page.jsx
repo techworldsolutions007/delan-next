@@ -95,17 +95,18 @@ export default async function Page({ params }) {
   const c = await getCollection(handle);
   if (!c) return notFound();
 
-  // Fetch the first batch of products server-side so CollectionPage renders
-  // with real data immediately — no client-side loading spinner on first visit.
-  // Default sort matches the client's initial sort state ("date-desc" → CREATED desc).
+  // Fetch all products server-side so the page renders complete with no
+  // pagination — hasNextPage stays false and the load-more skeleton never fires.
+  // Sort matches the client's default "featured" (COLLECTION_DEFAULT) to avoid
+  // a re-fetch on mount due to sort mismatch.
   let initialData = null;
   try {
     initialData = await shopify(GET_COLLECTION_BY_HANDLE, {
       handle,
-      first: 20,
+      first: 250,
       after: null,
-      sortKey: 'CREATED',
-      reverse: true,
+      sortKey: 'COLLECTION_DEFAULT',
+      reverse: false,
     }, { tags: ['collections', `collection-${handle}`] });
   } catch {
     // CollectionPage falls back to its own client-side fetch
